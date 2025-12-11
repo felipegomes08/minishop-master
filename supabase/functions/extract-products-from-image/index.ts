@@ -11,6 +11,7 @@ interface ExtractedProduct {
   name: string;
   quantity: number;
   unitPrice: number;
+  description?: string;
 }
 
 interface SimilarProduct {
@@ -56,20 +57,27 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `Você é um assistente especializado em extrair informações de notas fiscais e pedidos de compra.
-Analise a imagem fornecida e extraia a lista de produtos com suas quantidades e valores unitários.
+            content: `Você é um assistente especializado em extrair informações de notas fiscais e pedidos de compra de joias e acessórios.
+Analise a imagem fornecida e extraia a lista de produtos com suas quantidades, valores unitários e descrições resumidas.
 
 IMPORTANTE:
 - Extraia APENAS produtos válidos da nota/pedido
 - O valor deve ser o preço UNITÁRIO, não o total
 - Se houver quantidade, extraia corretamente
 - Ignore cabeçalhos, totais, impostos, etc
+- Para a DESCRIÇÃO, extraia detalhes como:
+  - Tamanho (ex: TAM 18, TAM 23, TAM P/M/G)
+  - Se é regulável
+  - Se é conjunto, trio, par
+  - Se é unissex
+  - Material (se visível)
+  - Formato bem resumido, máximo 30 caracteres
 - Retorne SOMENTE o JSON, sem texto adicional
 
 Retorne no formato JSON:
 {
   "products": [
-    { "name": "Nome do Produto", "quantity": 10, "unitPrice": 25.50 }
+    { "name": "Anel Prata 925", "quantity": 10, "unitPrice": 25.50, "description": "TAM 18, Regulável" }
   ]
 }`
           },

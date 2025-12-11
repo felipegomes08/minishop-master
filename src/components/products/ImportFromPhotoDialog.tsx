@@ -39,6 +39,7 @@ interface ExtractedProduct {
   name: string;
   quantity: number;
   unitPrice: number;
+  description?: string;
   similarProducts: SimilarProduct[];
   // User choices
   action: 'create' | 'link';
@@ -157,6 +158,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
           const salePrice = p.unitPrice * (1 + margin / 100);
           return {
             name: p.name,
+            description: p.description || null,
             cost_price: p.unitPrice,
             price: Math.round(salePrice * 100) / 100, // Round to 2 decimal places
             stock: p.quantity,
@@ -379,16 +381,17 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
             </div>
 
             {/* Products Table */}
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Produto</TableHead>
-                    <TableHead className="w-20 text-center">Qtd</TableHead>
-                    <TableHead className="w-28">Custo Unit.</TableHead>
-                    <TableHead className="w-28">Preço Venda</TableHead>
-                    <TableHead className="w-40">Status</TableHead>
-                    <TableHead className="w-12"></TableHead>
+                    <TableHead className="w-32">Descrição</TableHead>
+                    <TableHead className="w-16 text-center">Qtd</TableHead>
+                    <TableHead className="w-24">Custo</TableHead>
+                    <TableHead className="w-24">Venda</TableHead>
+                    <TableHead className="w-36">Status</TableHead>
+                    <TableHead className="w-10"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -398,7 +401,15 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                         <Input
                           value={product.name}
                           onChange={(e) => updateProduct(index, { name: e.target.value })}
-                          className="h-8"
+                          className="h-8 min-w-[140px]"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          value={product.description || ''}
+                          onChange={(e) => updateProduct(index, { description: e.target.value })}
+                          className="h-8 text-xs"
+                          placeholder="TAM, etc."
                         />
                       </TableCell>
                       <TableCell>
@@ -406,7 +417,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                           type="number"
                           value={product.quantity}
                           onChange={(e) => updateProduct(index, { quantity: parseInt(e.target.value) || 0 })}
-                          className="h-8 text-center"
+                          className="h-8 text-center w-14"
                         />
                       </TableCell>
                       <TableCell>
@@ -415,7 +426,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                           step="0.01"
                           value={product.unitPrice}
                           onChange={(e) => updateProduct(index, { unitPrice: parseFloat(e.target.value) || 0 })}
-                          className="h-8"
+                          className="h-8 w-20"
                         />
                       </TableCell>
                       <TableCell>

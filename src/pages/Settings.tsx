@@ -203,11 +203,13 @@ export default function Settings() {
                   Seu catálogo online está disponível para seus clientes
                 </p>
               </div>
-              <a href="/catalogo" target="_blank" rel="noopener noreferrer">
-                <Button variant="outline" size="sm">
-                  Ver Catálogo
-                </Button>
-              </a>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => window.open('/catalogo', '_blank')}
+              >
+                Ver Catálogo
+              </Button>
             </div>
           </div>
 

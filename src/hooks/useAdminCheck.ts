@@ -15,6 +15,9 @@ export function useAdminCheck() {
         return;
       }
 
+      // Reset loading when user changes
+      setLoading(true);
+      
       try {
         const { data, error } = await supabase.rpc('has_role', {
           _user_id: user.id,

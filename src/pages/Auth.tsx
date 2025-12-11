@@ -1,68 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdminCheck } from '@/hooks/useAdminCheck';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Store, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Store, Mail, Lock, ArrowRight, Loader2, KeyRound } from 'lucide-react';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [justLoggedIn, setJustLoggedIn] = useState(false);
-  const { signIn, signOut, user } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  // Check if user came from a logout action
-  const fromLogout = searchParams.get('logout') === 'true';
-
-  useEffect(() => {
-    const error = searchParams.get('error');
-    if (error === 'unauthorized') {
-      toast({
-        title: 'Acesso negado',
-        description: 'Você não tem permissão de administrador.',
-        variant: 'destructive',
-      });
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
-    // Don't redirect if user just logged out - let them stay on auth page
-    if (fromLogout) return;
-
-    // Only act on admin check results after the check has stabilized
-    if (!user || adminLoading || isAdmin === null) return;
-
-    if (isAdmin) {
-      setJustLoggedIn(false);
-      navigate('/');
-      return;
-    }
-
-    // If not admin and we just logged in, wait a bit and recheck
-    // This handles the race condition where the RPC might not see the role yet
-    if (justLoggedIn) {
-      const timeout = setTimeout(() => {
-        setJustLoggedIn(false);
-      }, 2000);
-      return () => clearTimeout(timeout);
-    }
-
-    // Only sign out if we're sure the user is not admin (after waiting period)
-    toast({
-      title: 'Acesso negado',
-      description: 'Você não tem permissão de administrador.',
-      variant: 'destructive',
-    });
-    signOut();
-  }, [user, isAdmin, adminLoading, navigate, signOut, justLoggedIn, fromLogout]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +56,33 @@ export default function Auth() {
           description: message,
           variant: 'destructive',
         });
-      } else {
-        // Mark that we just logged in to prevent premature logout
-        setJustLoggedIn(true);
+        setLoading(false);
+        return;
+      }
+
+      // Check if user is admin
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: isAdmin } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+
+        if (isAdmin) {
+          toast({
+            title: 'Bem-vindo!',
+            description: 'Login realizado com sucesso.',
+          });
+          navigate('/');
+        } else {
+          toast({
+            title: 'Acesso negado',
+            description: 'Você não tem permissão de administrador.',
+            variant: 'destructive',
+          });
+          await supabase.auth.signOut();
+        }
       }
     } catch (err) {
       toast({
@@ -112,6 +92,50 @@ export default function Auth() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail) {
+      toast({
+        title: 'Email obrigatório',
+        description: 'Por favor, informe seu email.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      const { error } = await supabase.functions.invoke('reset-password', {
+        body: { email: resetEmail }
+      });
+
+      if (error) {
+        toast({
+          title: 'Erro',
+          description: error.message || 'Não foi possível enviar o email.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Email enviado!',
+          description: 'Verifique sua caixa de entrada para a senha temporária.',
+        });
+        setResetDialogOpen(false);
+        setResetEmail('');
+      }
+    } catch (err) {
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro ao enviar o email.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -184,6 +208,45 @@ export default function Auth() {
                 Entrar
               </Button>
             </form>
+
+            <div className="mt-4 text-center">
+              <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="link" className="text-muted-foreground hover:text-foreground text-sm">
+                    <KeyRound className="w-3 h-3 mr-1" />
+                    Esqueci minha senha
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Recuperar Senha</DialogTitle>
+                    <DialogDescription>
+                      Informe seu email para receber uma senha temporária.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleResetPassword} className="space-y-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="seu@email.com"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={resetLoading}>
+                      {resetLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      ) : (
+                        <Mail className="w-4 h-4 mr-2" />
+                      )}
+                      Enviar senha temporária
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -7,56 +7,38 @@ export function useAdminCheck() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminRole = useCallback(async (userId: string, retryCount = 0): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase.rpc('has_role', {
-        _user_id: userId,
-        _role: 'admin'
-      });
-
-      if (error) {
-        console.error('Error checking admin role (attempt ' + (retryCount + 1) + '):', error);
-        if (retryCount < 3) {
-          await new Promise(resolve => setTimeout(resolve, 300 * (retryCount + 1)));
-          return checkAdminRole(userId, retryCount + 1);
-        }
-        return false;
-      }
-
-      return data === true;
-    } catch (err) {
-      console.error('Exception checking admin role (attempt ' + (retryCount + 1) + '):', err);
-      if (retryCount < 3) {
-        await new Promise(resolve => setTimeout(resolve, 300 * (retryCount + 1)));
-        return checkAdminRole(userId, retryCount + 1);
-      }
-      return false;
-    }
-  }, []);
-
   useEffect(() => {
-    async function performCheck() {
+    async function checkAdmin() {
       if (!user) {
         setIsAdmin(false);
         setLoading(false);
         return;
       }
 
-      setIsAdmin(null);
-      setLoading(true);
-      
-      // Longer delay to ensure auth token is fully propagated after login
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const result = await checkAdminRole(user.id);
-      setIsAdmin(result);
-      setLoading(false);
+      try {
+        const { data, error } = await supabase.rpc('has_role', {
+          _user_id: user.id,
+          _role: 'admin'
+        });
+
+        if (error) {
+          console.error('Erro ao verificar admin:', error);
+          setIsAdmin(false);
+        } else {
+          setIsAdmin(data === true);
+        }
+      } catch (err) {
+        console.error('Exceção ao verificar admin:', err);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
     }
 
     if (!authLoading) {
-      performCheck();
+      checkAdmin();
     }
-  }, [user, authLoading, checkAdminRole]);
+  }, [user, authLoading]);
 
   return { isAdmin, loading: authLoading || loading };
 }

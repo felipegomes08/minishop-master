@@ -151,7 +151,8 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
       if (toCreate.length > 0) {
         const newProducts = toCreate.map(p => ({
           name: p.name,
-          price: p.unitPrice,
+          cost_price: p.unitPrice,
+          price: 0,
           stock: p.quantity,
           category_id: defaultCategoryId || null,
           is_active: true,
@@ -323,6 +324,12 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
               </div>
             </div>
 
+            {/* Info about cost price */}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/10 text-accent text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              O valor extraído será salvo como <strong>valor de compra</strong>. Defina o preço de venda depois na edição do produto.
+            </div>
+
             {/* Default Category */}
             <div className="flex items-center gap-3">
               <Label className="whitespace-nowrap">Categoria padrão:</Label>
@@ -346,7 +353,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                   <TableRow className="bg-muted/50">
                     <TableHead>Produto</TableHead>
                     <TableHead className="w-20 text-center">Qtd</TableHead>
-                    <TableHead className="w-28">Valor Unit.</TableHead>
+                    <TableHead className="w-28">Custo Unit.</TableHead>
                     <TableHead className="w-40">Status</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>

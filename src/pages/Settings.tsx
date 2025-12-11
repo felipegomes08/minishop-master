@@ -1,0 +1,298 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/hooks/use-toast';
+import { 
+  Store,
+  Upload,
+  Loader2,
+  Palette
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface StoreSettings {
+  id: string;
+  store_name: string;
+  logo_url: string | null;
+  primary_color: string;
+  secondary_color: string;
+}
+
+export default function Settings() {
+  const [settings, setSettings] = useState<StoreSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    store_name: '',
+    logo_url: '',
+    primary_color: '#4F46E5',
+    secondary_color: '#F59E0B'
+  });
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('store_settings')
+        .select('*')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data) {
+        setSettings(data);
+        setFormData({
+          store_name: data.store_name,
+          logo_url: data.logo_url || '',
+          primary_color: data.primary_color,
+          secondary_color: data.secondary_color
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+      toast({ title: 'Logo uploaded successfully' });
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast({ title: 'Error uploading logo', variant: 'destructive' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.store_name) {
+      toast({ title: 'Store name is required', variant: 'destructive' });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const settingsData = {
+        store_name: formData.store_name,
+        logo_url: formData.logo_url || null,
+        primary_color: formData.primary_color,
+        secondary_color: formData.secondary_color
+      };
+
+      if (settings) {
+        const { error } = await supabase
+          .from('store_settings')
+          .update(settingsData)
+          .eq('id', settings.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('store_settings')
+          .insert([settingsData]);
+
+        if (error) throw error;
+      }
+
+      toast({ title: 'Settings saved successfully' });
+      fetchSettings();
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({ title: 'Error saving settings', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-96 rounded-xl" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Settings</h1>
+          <p className="text-muted-foreground mt-1">Configure your store preferences</p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="max-w-2xl">
+        <div className="form-section space-y-6">
+          {/* Store Name */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Store className="w-4 h-4" />
+              Store Name
+            </Label>
+            <Input
+              value={formData.store_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, store_name: e.target.value }))}
+              placeholder="My Store"
+            />
+          </div>
+
+          {/* Logo */}
+          <div className="space-y-2">
+            <Label>Logo</Label>
+            <div className="flex items-center gap-4">
+              <div className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex items-center justify-center overflow-hidden bg-secondary/30">
+                {formData.logo_url ? (
+                  <img 
+                    src={formData.logo_url} 
+                    alt="Store logo" 
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <Store className="w-8 h-8 text-muted-foreground" />
+                )}
+              </div>
+              <div>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    disabled={uploading}
+                  />
+                  <Button type="button" variant="outline" className="gap-2" asChild>
+                    <span>
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      Upload Logo
+                    </span>
+                  </Button>
+                </label>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Recommended: Square image, 256x256px
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Colors */}
+          <div className="space-y-4">
+            <Label className="flex items-center gap-2">
+              <Palette className="w-4 h-4" />
+              Brand Colors
+            </Label>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Primary Color</Label>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg border border-border cursor-pointer"
+                    style={{ backgroundColor: formData.primary_color }}
+                  >
+                    <input
+                      type="color"
+                      value={formData.primary_color}
+                      onChange={(e) => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
+                      className="w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <Input
+                    value={formData.primary_color}
+                    onChange={(e) => setFormData(prev => ({ ...prev, primary_color: e.target.value }))}
+                    className="flex-1 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Secondary Color</Label>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-lg border border-border cursor-pointer"
+                    style={{ backgroundColor: formData.secondary_color }}
+                  >
+                    <input
+                      type="color"
+                      value={formData.secondary_color}
+                      onChange={(e) => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))}
+                      className="w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
+                  <Input
+                    value={formData.secondary_color}
+                    onChange={(e) => setFormData(prev => ({ ...prev, secondary_color: e.target.value }))}
+                    className="flex-1 font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Color Preview */}
+            <div className="p-4 rounded-lg bg-secondary/30">
+              <p className="text-sm text-muted-foreground mb-3">Preview</p>
+              <div className="flex items-center gap-3">
+                <div
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{ backgroundColor: formData.primary_color }}
+                >
+                  Primary Button
+                </div>
+                <div
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-white"
+                  style={{ backgroundColor: formData.secondary_color }}
+                >
+                  Secondary Button
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4">
+            <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}

@@ -19,6 +19,9 @@ export default function Auth() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // Check if user came from a logout action
+  const fromLogout = searchParams.get('logout') === 'true';
+
   useEffect(() => {
     const error = searchParams.get('error');
     if (error === 'unauthorized') {
@@ -31,6 +34,9 @@ export default function Auth() {
   }, [searchParams]);
 
   useEffect(() => {
+    // Don't redirect if user just logged out - let them stay on auth page
+    if (fromLogout) return;
+
     // Only act on admin check results after the check has stabilized
     if (!user || adminLoading || isAdmin === null) return;
 
@@ -56,7 +62,7 @@ export default function Auth() {
       variant: 'destructive',
     });
     signOut();
-  }, [user, isAdmin, adminLoading, navigate, signOut, justLoggedIn]);
+  }, [user, isAdmin, adminLoading, navigate, signOut, justLoggedIn, fromLogout]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

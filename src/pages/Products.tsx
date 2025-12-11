@@ -22,8 +22,15 @@ import {
   Upload,
   Loader2,
   Check,
-  Camera
+  Camera,
+  MoreVertical
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
 
@@ -51,6 +58,7 @@ interface EditingRow {
   name: string;
   category_id: string;
   price: string;
+  is_active: boolean;
 }
 
 export default function Products() {
@@ -257,7 +265,8 @@ export default function Products() {
       id: product.id,
       name: product.name,
       category_id: product.category_id || '',
-      price: product.price.toString()
+      price: product.price.toString(),
+      is_active: product.is_active
     });
   };
 
@@ -280,7 +289,8 @@ export default function Products() {
         .update({
           name: editingRow.name,
           category_id: editingRow.category_id || null,
-          price: parseFloat(editingRow.price)
+          price: parseFloat(editingRow.price),
+          is_active: editingRow.is_active
         })
         .eq('id', editingRow.id);
 
@@ -289,7 +299,7 @@ export default function Products() {
       // Update local state
       setProducts(prev => prev.map(p => 
         p.id === editingRow.id 
-          ? { ...p, name: editingRow.name, category_id: editingRow.category_id || null, price: parseFloat(editingRow.price) }
+          ? { ...p, name: editingRow.name, category_id: editingRow.category_id || null, price: parseFloat(editingRow.price), is_active: editingRow.is_active }
           : p
       ));
       
@@ -524,7 +534,7 @@ export default function Products() {
         </Select>
       </div>
 
-      {/* Products Table */}
+      {/* Products */}
       {loading ? (
         <div className="space-y-3">
           {Array(5).fill(0).map((_, i) => (
@@ -543,175 +553,334 @@ export default function Products() {
           </p>
         </div>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-16">Imagem</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead className="w-40">Categoria</TableHead>
-                <TableHead className="w-32">Preço</TableHead>
-                <TableHead className="w-24">Status</TableHead>
-                <TableHead className="w-32 text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProducts.map(product => {
-                const isEditing = editingRow?.id === product.id;
-                
-                return (
-                  <TableRow key={product.id} className="group">
-                    <TableCell>
-                      <div className="w-12 h-12 rounded-md overflow-hidden bg-secondary flex items-center justify-center">
-                        {product.images && product.images.length > 0 ? (
-                          <img
-                            src={product.images[0]}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
+        <>
+          {/* Mobile Cards */}
+          <div className="grid grid-cols-1 gap-3 md:hidden">
+            {filteredProducts.map(product => {
+              const isEditing = editingRow?.id === product.id;
+              
+              return (
+                <div key={product.id} className="bg-card border border-border rounded-lg p-3">
+                  {isEditing ? (
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <div className="w-14 h-14 rounded-md overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
+                          {product.images && product.images.length > 0 ? (
+                            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1 space-y-2">
+                          <Input
+                            value={editingRow.name}
+                            onChange={(e) => setEditingRow(prev => prev ? { ...prev, name: e.target.value } : null)}
+                            className="h-8 text-sm"
+                            placeholder="Nome"
                           />
+                          <div className="flex gap-2">
+                            <Select
+                              value={editingRow.category_id || "none"}
+                              onValueChange={(value) => setEditingRow(prev => prev ? { ...prev, category_id: value === "none" ? "" : value } : null)}
+                            >
+                              <SelectTrigger className="h-8 flex-1 text-sm">
+                                <SelectValue placeholder="Categoria" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Sem categoria</SelectItem>
+                                {categories.map(cat => (
+                                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={editingRow.price}
+                              onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
+                              className="h-8 w-24 text-sm"
+                              placeholder="Preço"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={editingRow.is_active}
+                            onCheckedChange={(checked) => setEditingRow(prev => prev ? { ...prev, is_active: checked } : null)}
+                          />
+                          <span className="text-sm text-muted-foreground">{editingRow.is_active ? 'Ativo' : 'Inativo'}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={cancelEditingRow}>
+                            Cancelar
+                          </Button>
+                          <Button size="sm" onClick={saveEditingRow} disabled={savingRow} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                            {savingRow ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-3">
+                      <div 
+                        className="w-14 h-14 rounded-md overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center cursor-pointer"
+                        onClick={() => startEditingRow(product)}
+                      >
+                        {product.images && product.images.length > 0 ? (
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon className="w-5 h-5 text-muted-foreground" />
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          value={editingRow.name}
-                          onChange={(e) => setEditingRow(prev => prev ? { ...prev, name: e.target.value } : null)}
-                          className="h-8"
-                          autoFocus
-                        />
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:text-accent transition-colors"
-                          onClick={() => startEditingRow(product)}
-                        >
-                          {product.name}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {isEditing ? (
-                        <Select
-                          value={editingRow.category_id || "none"}
-                          onValueChange={(value) => setEditingRow(prev => prev ? { ...prev, category_id: value === "none" ? "" : value } : null)}
-                        >
-                          <SelectTrigger className="h-8">
-                            <SelectValue placeholder="Selecionar" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sem categoria</SelectItem>
-                            {categories.map(cat => (
-                              <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span 
-                          className="cursor-pointer hover:text-accent transition-colors text-muted-foreground"
-                          onClick={() => startEditingRow(product)}
-                        >
-                          {getCategoryName(product.category_id)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editingRow.price}
-                          onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
-                          className="h-8"
-                        />
-                      ) : (
-                        <div 
-                          className="cursor-pointer hover:text-accent transition-colors"
-                          onClick={() => startEditingRow(product)}
-                        >
-                          {product.promotional_price ? (
-                            <div className="flex flex-col">
-                              <span className="font-medium text-success text-sm">{formatCurrency(product.promotional_price)}</span>
-                              <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.price)}</span>
-                            </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1" onClick={() => startEditingRow(product)}>
+                            <h3 className="font-medium truncate cursor-pointer hover:text-accent transition-colors">
+                              {product.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {getCategoryName(product.category_id)}
+                            </p>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => openEditDialog(product)}>
+                                <Edit2 className="w-4 h-4 mr-2" />
+                                Editar completo
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => duplicateProduct(product)}>
+                                <Copy className="w-4 h-4 mr-2" />
+                                Duplicar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => deleteProduct(product.id)} className="text-destructive">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="flex items-center justify-between mt-2">
+                          <div onClick={() => startEditingRow(product)} className="cursor-pointer">
+                            {product.promotional_price ? (
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-success">{formatCurrency(product.promotional_price)}</span>
+                                <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.price)}</span>
+                              </div>
+                            ) : (
+                              <span className="font-medium">{formatCurrency(product.price)}</span>
+                            )}
+                          </div>
+                          <Badge
+                            className={cn(
+                              "cursor-pointer",
+                              product.is_active 
+                                ? "bg-success/10 text-success border-success/20" 
+                                : "bg-muted text-muted-foreground"
+                            )}
+                            variant="outline"
+                            onClick={() => startEditingRow(product)}
+                          >
+                            {product.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block border border-border rounded-lg overflow-hidden bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-16">Imagem</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="w-40">Categoria</TableHead>
+                  <TableHead className="w-32">Preço</TableHead>
+                  <TableHead className="w-28">Status</TableHead>
+                  <TableHead className="w-32 text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map(product => {
+                  const isEditing = editingRow?.id === product.id;
+                  
+                  return (
+                    <TableRow key={product.id} className="group">
+                      <TableCell>
+                        <div className="w-12 h-12 rounded-md overflow-hidden bg-secondary flex items-center justify-center">
+                          {product.images && product.images.length > 0 ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <span className="font-medium">{formatCurrency(product.price)}</span>
+                            <ImageIcon className="w-5 h-5 text-muted-foreground" />
                           )}
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={cn(
-                          product.is_active 
-                            ? "bg-success/10 text-success border-success/20" 
-                            : "bg-muted text-muted-foreground"
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={editingRow.name}
+                            onChange={(e) => setEditingRow(prev => prev ? { ...prev, name: e.target.value } : null)}
+                            className="h-8"
+                            autoFocus
+                          />
+                        ) : (
+                          <span 
+                            className="cursor-pointer hover:text-accent transition-colors"
+                            onClick={() => startEditingRow(product)}
+                          >
+                            {product.name}
+                          </span>
                         )}
-                        variant="outline"
-                      >
-                        {product.is_active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {isEditing ? (
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-success hover:text-success"
-                            onClick={saveEditingRow}
-                            disabled={savingRow}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Select
+                            value={editingRow.category_id || "none"}
+                            onValueChange={(value) => setEditingRow(prev => prev ? { ...prev, category_id: value === "none" ? "" : value } : null)}
                           >
-                            {savingRow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={cancelEditingRow}
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="Selecionar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Sem categoria</SelectItem>
+                              {categories.map(cat => (
+                                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span 
+                            className="cursor-pointer hover:text-accent transition-colors text-muted-foreground"
+                            onClick={() => startEditingRow(product)}
                           >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(product)}
-                            title="Edição completa"
+                            {getCategoryName(product.category_id)}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editingRow.price}
+                            onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
+                            className="h-8"
+                          />
+                        ) : (
+                          <div 
+                            className="cursor-pointer hover:text-accent transition-colors"
+                            onClick={() => startEditingRow(product)}
                           >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => duplicateProduct(product)}
-                            title="Duplicar"
+                            {product.promotional_price ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium text-success text-sm">{formatCurrency(product.promotional_price)}</span>
+                                <span className="text-xs text-muted-foreground line-through">{formatCurrency(product.price)}</span>
+                              </div>
+                            ) : (
+                              <span className="font-medium">{formatCurrency(product.price)}</span>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              checked={editingRow.is_active}
+                              onCheckedChange={(checked) => setEditingRow(prev => prev ? { ...prev, is_active: checked } : null)}
+                            />
+                            <span className="text-xs text-muted-foreground">{editingRow.is_active ? 'Ativo' : 'Inativo'}</span>
+                          </div>
+                        ) : (
+                          <Badge
+                            className={cn(
+                              "cursor-pointer",
+                              product.is_active 
+                                ? "bg-success/10 text-success border-success/20" 
+                                : "bg-muted text-muted-foreground"
+                            )}
+                            variant="outline"
+                            onClick={() => startEditingRow(product)}
                           >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => deleteProduct(product.id)}
-                            title="Excluir"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
+                            {product.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isEditing ? (
+                          <div className="flex gap-1 justify-end">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-success hover:text-success"
+                              onClick={saveEditingRow}
+                              disabled={savingRow}
+                            >
+                              {savingRow ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={cancelEditingRow}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditDialog(product)}
+                              title="Edição completa"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => duplicateProduct(product)}
+                              title="Duplicar"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive"
+                              onClick={() => deleteProduct(product.id)}
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </div>
   );

@@ -11,6 +11,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from '@/hooks/use-toast';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   Plus, 
   Search, 
@@ -97,7 +98,7 @@ export default function Sales() {
       if (productsRes.data) setProducts(productsRes.data);
       if (customersRes.data) setCustomers(customersRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Erro ao buscar dados:', error);
     } finally {
       setLoading(false);
     }
@@ -152,7 +153,7 @@ export default function Sales() {
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
-      toast({ title: 'Cart is empty', variant: 'destructive' });
+      toast({ title: 'Carrinho vazio', variant: 'destructive' });
       return;
     }
 
@@ -165,7 +166,7 @@ export default function Sales() {
         .insert([{
           customer_id: selectedCustomer || null,
           total: cartTotal,
-          status: 'completed'
+          status: 'concluída'
         }])
         .select()
         .single();
@@ -188,22 +189,22 @@ export default function Sales() {
 
       if (itemsError) throw itemsError;
 
-      toast({ title: 'Sale completed successfully!' });
+      toast({ title: 'Venda finalizada com sucesso!' });
       setDialogOpen(false);
       resetCart();
       fetchData();
     } catch (error) {
-      console.error('Error completing sale:', error);
-      toast({ title: 'Error completing sale', variant: 'destructive' });
+      console.error('Erro ao finalizar venda:', error);
+      toast({ title: 'Erro ao finalizar venda', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'BRL'
     }).format(value);
   };
 
@@ -225,19 +226,19 @@ export default function Sales() {
     <div className="space-y-6 animate-fade-in">
       <div className="page-header flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="page-title">Sales</h1>
-          <p className="text-muted-foreground mt-1">Manage orders and process sales</p>
+          <h1 className="page-title">Vendas</h1>
+          <p className="text-muted-foreground mt-1">Gerencie pedidos e processe vendas</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetCart(); }}>
           <DialogTrigger asChild>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
               <Plus className="w-4 h-4" />
-              New Sale
+              Nova Venda
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
-              <DialogTitle>New Sale</DialogTitle>
+              <DialogTitle>Nova Venda</DialogTitle>
             </DialogHeader>
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
               {/* Products */}
@@ -245,7 +246,7 @@ export default function Sales() {
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search products..."
+                    placeholder="Buscar produtos..."
                     value={productSearch}
                     onChange={(e) => setProductSearch(e.target.value)}
                     className="pl-10"
@@ -284,7 +285,7 @@ export default function Sales() {
                       </div>
                       {product.stock !== null && (
                         <Badge variant="outline" className="shrink-0">
-                          {product.stock} in stock
+                          {product.stock} em estoque
                         </Badge>
                       )}
                     </button>
@@ -294,13 +295,13 @@ export default function Sales() {
 
               {/* Cart */}
               <div className="flex flex-col bg-secondary/30 rounded-xl p-4 overflow-hidden">
-                <h3 className="font-medium mb-4">Cart</h3>
+                <h3 className="font-medium mb-4">Carrinho</h3>
                 
                 <div className="flex-1 overflow-y-auto space-y-3 mb-4">
                   {cart.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>Cart is empty</p>
+                      <p>Carrinho vazio</p>
                     </div>
                   ) : (
                     cart.map(item => (
@@ -308,7 +309,7 @@ export default function Sales() {
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{item.product.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {formatCurrency(getPrice(item.product))} each
+                            {formatCurrency(getPrice(item.product))} cada
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -340,13 +341,13 @@ export default function Sales() {
 
                 <div className="border-t border-border pt-4 space-y-4">
                   <div className="space-y-2">
-                    <Label>Customer (optional)</Label>
+                    <Label>Cliente (opcional)</Label>
                     <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select customer" />
+                        <SelectValue placeholder="Selecionar cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No customer</SelectItem>
+                        <SelectItem value="">Sem cliente</SelectItem>
                         {customers.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}
@@ -365,7 +366,7 @@ export default function Sales() {
                     onClick={handleCompleteSale}
                   >
                     {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Complete Sale
+                    Finalizar Venda
                   </Button>
                 </div>
               </div>
@@ -379,7 +380,7 @@ export default function Sales() {
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search sales..."
+            placeholder="Buscar vendas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -391,10 +392,10 @@ export default function Sales() {
               <CalendarIcon className="w-4 h-4" />
               {dateRange?.from && dateRange?.to ? (
                 <>
-                  {format(dateRange.from, 'MMM d')} - {format(dateRange.to, 'MMM d')}
+                  {format(dateRange.from, 'd MMM', { locale: ptBR })} - {format(dateRange.to, 'd MMM', { locale: ptBR })}
                 </>
               ) : (
-                'Select dates'
+                'Selecionar datas'
               )}
             </Button>
           </PopoverTrigger>
@@ -404,6 +405,7 @@ export default function Sales() {
               selected={dateRange}
               onSelect={setDateRange}
               numberOfMonths={2}
+              locale={ptBR}
             />
           </PopoverContent>
         </Popover>
@@ -419,9 +421,9 @@ export default function Sales() {
       ) : filteredSales.length === 0 ? (
         <div className="text-center py-16">
           <Receipt className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">No sales found</h3>
+          <h3 className="text-lg font-medium">Nenhuma venda encontrada</h3>
           <p className="text-muted-foreground mt-1">
-            {searchQuery ? 'Try a different search' : 'Create your first sale'}
+            {searchQuery ? 'Tente uma busca diferente' : 'Crie sua primeira venda'}
           </p>
         </div>
       ) : (
@@ -430,9 +432,9 @@ export default function Sales() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-secondary/30">
-                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Date</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Customer</th>
-                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Items</th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Data</th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Cliente</th>
+                  <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Itens</th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Total</th>
                   <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
                   <th className="px-4 py-3"></th>
@@ -442,16 +444,16 @@ export default function Sales() {
                 {filteredSales.map(sale => (
                   <tr key={sale.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="font-medium">{format(new Date(sale.created_at), 'MMM d, yyyy')}</span>
+                      <span className="font-medium">{format(new Date(sale.created_at), "d 'de' MMM, yyyy", { locale: ptBR })}</span>
                       <span className="text-muted-foreground text-sm block">
-                        {format(new Date(sale.created_at), 'h:mm a')}
+                        {format(new Date(sale.created_at), 'HH:mm', { locale: ptBR })}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       {sale.customers?.name || <span className="text-muted-foreground">-</span>}
                     </td>
                     <td className="px-4 py-3">
-                      {sale.sale_items?.length || 0} items
+                      {sale.sale_items?.length || 0} itens
                     </td>
                     <td className="px-4 py-3 font-semibold text-success">
                       {formatCurrency(sale.total)}
@@ -483,23 +485,23 @@ export default function Sales() {
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Sale Details</DialogTitle>
+            <DialogTitle>Detalhes da Venda</DialogTitle>
           </DialogHeader>
           {viewingSale && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Date</span>
-                  <p className="font-medium">{format(new Date(viewingSale.created_at), 'PPP p')}</p>
+                  <span className="text-muted-foreground">Data</span>
+                  <p className="font-medium">{format(new Date(viewingSale.created_at), "PPP 'às' HH:mm", { locale: ptBR })}</p>
                 </div>
                 <div>
-                  <span className="text-muted-foreground">Customer</span>
+                  <span className="text-muted-foreground">Cliente</span>
                   <p className="font-medium">{viewingSale.customers?.name || '-'}</p>
                 </div>
               </div>
 
               <div className="border-t border-border pt-4">
-                <h4 className="font-medium mb-3">Items</h4>
+                <h4 className="font-medium mb-3">Itens</h4>
                 <div className="space-y-2">
                   {viewingSale.sale_items?.map((item, i) => (
                     <div key={i} className="flex justify-between text-sm">

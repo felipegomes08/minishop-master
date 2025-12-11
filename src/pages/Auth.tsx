@@ -27,8 +27,8 @@ export default function Auth() {
     
     if (!email || !password) {
       toast({
-        title: 'Missing fields',
-        description: 'Please fill in all fields.',
+        title: 'Campos obrigatórios',
+        description: 'Por favor, preencha todos os campos.',
         variant: 'destructive',
       });
       return;
@@ -36,8 +36,8 @@ export default function Auth() {
 
     if (password.length < 6) {
       toast({
-        title: 'Password too short',
-        description: 'Password must be at least 6 characters.',
+        title: 'Senha muito curta',
+        description: 'A senha deve ter pelo menos 6 caracteres.',
         variant: 'destructive',
       });
       return;
@@ -53,25 +53,25 @@ export default function Auth() {
       if (error) {
         let message = error.message;
         if (error.message.includes('Invalid login credentials')) {
-          message = 'Invalid email or password. Please try again.';
+          message = 'Email ou senha inválidos. Tente novamente.';
         } else if (error.message.includes('User already registered')) {
-          message = 'This email is already registered. Please sign in.';
+          message = 'Este email já está cadastrado. Faça login.';
         }
         toast({
-          title: 'Error',
+          title: 'Erro',
           description: message,
           variant: 'destructive',
         });
       } else if (!isLogin) {
         toast({
-          title: 'Account created',
-          description: 'Welcome to your store admin panel!',
+          title: 'Conta criada',
+          description: 'Bem-vindo ao painel administrativo da sua loja!',
         });
       }
     } catch (err) {
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred.',
+        title: 'Erro',
+        description: 'Ocorreu um erro inesperado.',
         variant: 'destructive',
       });
     } finally {
@@ -86,19 +86,19 @@ export default function Auth() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
             <Store className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Store Admin</h1>
-          <p className="text-muted-foreground mt-1">Manage your online store</p>
+          <h1 className="text-2xl font-bold tracking-tight">Painel Admin</h1>
+          <p className="text-muted-foreground mt-1">Gerencie sua loja online</p>
         </div>
 
         <Card className="border-border/50 shadow-medium">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl">
-              {isLogin ? 'Welcome back' : 'Create account'}
+              {isLogin ? 'Bem-vindo de volta' : 'Criar conta'}
             </CardTitle>
             <CardDescription>
               {isLogin 
-                ? 'Enter your credentials to access your dashboard'
-                : 'Set up your admin account to get started'
+                ? 'Entre com suas credenciais para acessar o painel'
+                : 'Configure sua conta de administrador para começar'
               }
             </CardDescription>
           </CardHeader>
@@ -113,7 +113,7 @@ export default function Auth() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="admin@store.com"
+                    placeholder="admin@loja.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
@@ -124,7 +124,7 @@ export default function Auth() {
 
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  Senha
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -150,7 +150,7 @@ export default function Auth() {
                 ) : (
                   <ArrowRight className="w-4 h-4 mr-2" />
                 )}
-                {isLogin ? 'Sign In' : 'Create Account'}
+                {isLogin ? 'Entrar' : 'Criar Conta'}
               </Button>
             </form>
 
@@ -160,9 +160,9 @@ export default function Auth() {
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                {isLogin ? "Don't have an account? " : 'Already have an account? '}
+                {isLogin ? 'Não tem uma conta? ' : 'Já tem uma conta? '}
                 <span className="text-accent font-medium">
-                  {isLogin ? 'Sign up' : 'Sign in'}
+                  {isLogin ? 'Cadastre-se' : 'Entrar'}
                 </span>
               </button>
             </div>

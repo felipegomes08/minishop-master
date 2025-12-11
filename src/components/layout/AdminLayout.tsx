@@ -22,12 +22,12 @@ interface AdminLayoutProps {
 }
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/products', icon: Package, label: 'Products' },
-  { path: '/categories', icon: FolderTree, label: 'Categories' },
-  { path: '/customers', icon: Users, label: 'Customers' },
-  { path: '/sales', icon: ShoppingCart, label: 'Sales' },
-  { path: '/settings', icon: Settings, label: 'Settings' },
+  { path: '/', icon: LayoutDashboard, label: 'Painel' },
+  { path: '/products', icon: Package, label: 'Produtos' },
+  { path: '/categories', icon: FolderTree, label: 'Categorias' },
+  { path: '/customers', icon: Users, label: 'Clientes' },
+  { path: '/sales', icon: ShoppingCart, label: 'Vendas' },
+  { path: '/settings', icon: Settings, label: 'Configurações' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -105,7 +105,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             )}
           >
             <LogOut className="w-5 h-5 shrink-0" />
-            {sidebarOpen && <span className="text-sm font-medium">Sign Out</span>}
+            {sidebarOpen && <span className="text-sm font-medium">Sair</span>}
           </button>
         </div>
       </aside>
@@ -169,7 +169,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive"
           >
             <LogOut className="w-5 h-5 shrink-0" />
-            <span className="text-sm font-medium">Sign Out</span>
+            <span className="text-sm font-medium">Sair</span>
           </button>
         </div>
       </aside>

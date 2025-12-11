@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   DollarSign, 
   ShoppingCart, 
@@ -104,7 +105,7 @@ export default function Dashboard() {
       // Revenue by day
       const revenueByDay: Record<string, number> = {};
       sales?.forEach(sale => {
-        const date = format(new Date(sale.created_at), 'MMM dd');
+        const date = format(new Date(sale.created_at), 'dd MMM', { locale: ptBR });
         revenueByDay[date] = (revenueByDay[date] || 0) + Number(sale.total);
       });
       const revenueData = Object.entries(revenueByDay)
@@ -121,7 +122,7 @@ export default function Dashboard() {
         revenueByDay: revenueData
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      console.error('Erro ao buscar estatísticas:', error);
     } finally {
       setLoading(false);
     }
@@ -154,9 +155,9 @@ export default function Dashboard() {
       if (error) throw error;
       setInsights(data?.insights || []);
     } catch (error) {
-      console.error('Error fetching insights:', error);
+      console.error('Erro ao buscar insights:', error);
       setInsights([
-        { title: 'Welcome!', description: 'Start adding products and making sales to get AI-powered insights.', type: 'info' }
+        { title: 'Bem-vindo!', description: 'Adicione produtos e faça vendas para receber insights da IA.', type: 'info' }
       ]);
     } finally {
       setInsightsLoading(false);
@@ -174,9 +175,9 @@ export default function Dashboard() {
   }, [stats]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'BRL'
     }).format(value);
   };
 
@@ -184,8 +185,8 @@ export default function Dashboard() {
     <div className="space-y-8 animate-fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Overview of your store performance</p>
+          <h1 className="page-title">Painel</h1>
+          <p className="text-muted-foreground mt-1">Visão geral do desempenho da sua loja</p>
         </div>
         <Popover>
           <PopoverTrigger asChild>
@@ -193,10 +194,10 @@ export default function Dashboard() {
               <CalendarIcon className="w-4 h-4" />
               {dateRange?.from && dateRange?.to ? (
                 <>
-                  {format(dateRange.from, 'MMM d')} - {format(dateRange.to, 'MMM d, yyyy')}
+                  {format(dateRange.from, 'd MMM', { locale: ptBR })} - {format(dateRange.to, "d MMM, yyyy", { locale: ptBR })}
                 </>
               ) : (
-                'Select date range'
+                'Selecionar período'
               )}
             </Button>
           </PopoverTrigger>
@@ -206,6 +207,7 @@ export default function Dashboard() {
               selected={dateRange}
               onSelect={setDateRange}
               numberOfMonths={2}
+              locale={ptBR}
             />
           </PopoverContent>
         </Popover>
@@ -222,7 +224,7 @@ export default function Dashboard() {
             <div className="kpi-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Revenue</p>
+                  <p className="text-sm text-muted-foreground">Receita Total</p>
                   <p className="text-2xl font-bold mt-1">{formatCurrency(stats?.totalRevenue || 0)}</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
@@ -234,7 +236,7 @@ export default function Dashboard() {
             <div className="kpi-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Sales</p>
+                  <p className="text-sm text-muted-foreground">Total de Vendas</p>
                   <p className="text-2xl font-bold mt-1">{stats?.totalSales || 0}</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -246,7 +248,7 @@ export default function Dashboard() {
             <div className="kpi-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Products</p>
+                  <p className="text-sm text-muted-foreground">Produtos</p>
                   <p className="text-2xl font-bold mt-1">{stats?.totalProducts || 0}</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
@@ -258,7 +260,7 @@ export default function Dashboard() {
             <div className="kpi-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Customers</p>
+                  <p className="text-sm text-muted-foreground">Clientes</p>
                   <p className="text-2xl font-bold mt-1">{stats?.totalCustomers || 0}</p>
                 </div>
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -277,7 +279,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="w-5 h-5 text-accent" />
-              Revenue Trend
+              Tendência de Receita
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -308,7 +310,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             ) : (
               <div className="h-64 flex items-center justify-center text-muted-foreground">
-                No sales data available for this period
+                Nenhum dado de vendas disponível para este período
               </div>
             )}
           </CardContent>
@@ -319,7 +321,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Package className="w-5 h-5 text-warning" />
-              Best Selling Products
+              Produtos Mais Vendidos
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -345,7 +347,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             ) : (
               <div className="h-64 flex items-center justify-center text-muted-foreground">
-                No product sales data yet
+                Nenhum dado de vendas de produtos ainda
               </div>
             )}
           </CardContent>
@@ -357,7 +359,7 @@ export default function Dashboard() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Sparkles className="w-5 h-5 text-accent" />
-            AI Insights
+            Insights de IA
           </CardTitle>
           <Button 
             variant="ghost" 
@@ -372,7 +374,7 @@ export default function Dashboard() {
           {insightsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-accent" />
-              <span className="ml-2 text-muted-foreground">Analyzing your data...</span>
+              <span className="ml-2 text-muted-foreground">Analisando seus dados...</span>
             </div>
           ) : insights.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -393,7 +395,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              Add products and make sales to get AI-powered insights
+              Adicione produtos e faça vendas para receber insights da IA
             </div>
           )}
         </CardContent>
@@ -405,7 +407,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Users className="w-5 h-5 text-primary" />
-              Top Customers
+              Melhores Clientes
             </CardTitle>
           </CardHeader>
           <CardContent>

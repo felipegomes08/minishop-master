@@ -56,7 +56,7 @@ export default function Categories() {
       if (error) throw error;
       if (data) setCategories(data);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Erro ao buscar categorias:', error);
     } finally {
       setLoading(false);
     }
@@ -108,13 +108,13 @@ export default function Categories() {
     e.preventDefault();
     
     if (!formData.name) {
-      toast({ title: 'Name is required', variant: 'destructive' });
+      toast({ title: 'Nome é obrigatório', variant: 'destructive' });
       return;
     }
 
     // Prevent circular reference
     if (editingCategory && formData.parent_id === editingCategory.id) {
-      toast({ title: 'A category cannot be its own parent', variant: 'destructive' });
+      toast({ title: 'Uma categoria não pode ser pai de si mesma', variant: 'destructive' });
       return;
     }
 
@@ -133,22 +133,22 @@ export default function Categories() {
           .eq('id', editingCategory.id);
 
         if (error) throw error;
-        toast({ title: 'Category updated successfully' });
+        toast({ title: 'Categoria atualizada com sucesso' });
       } else {
         const { error } = await supabase
           .from('categories')
           .insert([categoryData]);
 
         if (error) throw error;
-        toast({ title: 'Category created successfully' });
+        toast({ title: 'Categoria criada com sucesso' });
       }
 
       setDialogOpen(false);
       resetForm();
       fetchCategories();
     } catch (error) {
-      console.error('Error saving category:', error);
-      toast({ title: 'Error saving category', variant: 'destructive' });
+      console.error('Erro ao salvar categoria:', error);
+      toast({ title: 'Erro ao salvar categoria', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -158,23 +158,23 @@ export default function Categories() {
     const hasChildren = categories.some(c => c.parent_id === id);
     if (hasChildren) {
       toast({ 
-        title: 'Cannot delete', 
-        description: 'This category has subcategories. Delete them first.',
+        title: 'Não é possível excluir', 
+        description: 'Esta categoria possui subcategorias. Exclua-as primeiro.',
         variant: 'destructive' 
       });
       return;
     }
 
-    if (!confirm('Are you sure you want to delete this category?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta categoria?')) return;
 
     try {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
-      toast({ title: 'Category deleted successfully' });
+      toast({ title: 'Categoria excluída com sucesso' });
       fetchCategories();
     } catch (error) {
-      console.error('Error deleting category:', error);
-      toast({ title: 'Error deleting category', variant: 'destructive' });
+      console.error('Erro ao excluir categoria:', error);
+      toast({ title: 'Erro ao excluir categoria', variant: 'destructive' });
     }
   };
 
@@ -259,41 +259,41 @@ export default function Categories() {
     <div className="space-y-6 animate-fade-in">
       <div className="page-header flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="page-title">Categories</h1>
-          <p className="text-muted-foreground mt-1">Organize your products with hierarchical categories</p>
+          <h1 className="page-title">Categorias</h1>
+          <p className="text-muted-foreground mt-1">Organize seus produtos com categorias hierárquicas</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
               <Plus className="w-4 h-4" />
-              Add Category
+              Adicionar Categoria
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingCategory ? 'Edit Category' : 'New Category'}</DialogTitle>
+              <DialogTitle>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Name *</Label>
+                <Label>Nome *</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Category name"
+                  placeholder="Nome da categoria"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Parent Category</Label>
+                <Label>Categoria Pai</Label>
                 <Select
                   value={formData.parent_id}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, parent_id: value }))}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="None (top level)" />
+                    <SelectValue placeholder="Nenhuma (nível principal)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (top level)</SelectItem>
+                    <SelectItem value="">Nenhuma (nível principal)</SelectItem>
                     {getParentOptions(editingCategory?.id).map(cat => (
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
@@ -303,11 +303,11 @@ export default function Categories() {
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  {editingCategory ? 'Update' : 'Create'}
+                  {editingCategory ? 'Atualizar' : 'Criar'}
                 </Button>
               </div>
             </form>
@@ -326,9 +326,9 @@ export default function Categories() {
         ) : categories.length === 0 ? (
           <div className="text-center py-16">
             <Folder className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No categories yet</h3>
+            <h3 className="text-lg font-medium">Nenhuma categoria ainda</h3>
             <p className="text-muted-foreground mt-1">
-              Create your first category to organize products
+              Crie sua primeira categoria para organizar produtos
             </p>
           </div>
         ) : (

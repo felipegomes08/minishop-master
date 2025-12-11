@@ -9,7 +9,9 @@ import {
   Store,
   Upload,
   Loader2,
-  Palette
+  Palette,
+  Phone,
+  ExternalLink
 } from 'lucide-react';
 
 interface StoreSettings {
@@ -18,6 +20,7 @@ interface StoreSettings {
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
+  whatsapp_number: string | null;
 }
 
 export default function Settings() {
@@ -31,7 +34,8 @@ export default function Settings() {
     store_name: '',
     logo_url: '',
     primary_color: '#4F46E5',
-    secondary_color: '#F59E0B'
+    secondary_color: '#F59E0B',
+    whatsapp_number: ''
   });
 
   const fetchSettings = async () => {
@@ -50,7 +54,8 @@ export default function Settings() {
           store_name: data.store_name,
           logo_url: data.logo_url || '',
           primary_color: data.primary_color,
-          secondary_color: data.secondary_color
+          secondary_color: data.secondary_color,
+          whatsapp_number: data.whatsapp_number || ''
         });
       }
     } catch (error) {
@@ -108,7 +113,8 @@ export default function Settings() {
         store_name: formData.store_name,
         logo_url: formData.logo_url || null,
         primary_color: formData.primary_color,
-        secondary_color: formData.secondary_color
+        secondary_color: formData.secondary_color,
+        whatsapp_number: formData.whatsapp_number || null
       };
 
       if (settings) {
@@ -167,6 +173,42 @@ export default function Settings() {
               onChange={(e) => setFormData(prev => ({ ...prev, store_name: e.target.value }))}
               placeholder="Minha Loja"
             />
+          </div>
+
+          {/* WhatsApp */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Phone className="w-4 h-4" />
+              WhatsApp para Vendas
+            </Label>
+            <Input
+              value={formData.whatsapp_number}
+              onChange={(e) => setFormData(prev => ({ ...prev, whatsapp_number: e.target.value }))}
+              placeholder="5511999999999"
+            />
+            <p className="text-sm text-muted-foreground">
+              Número com código do país e DDD, sem espaços. Ex: 5511999999999
+            </p>
+          </div>
+
+          {/* Catálogo Público */}
+          <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-foreground flex items-center gap-2">
+                  <ExternalLink className="w-4 h-4" />
+                  Catálogo Público
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Seu catálogo online está disponível para seus clientes
+                </p>
+              </div>
+              <a href="/catalogo" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm">
+                  Ver Catálogo
+                </Button>
+              </a>
+            </div>
           </div>
 
           {/* Logo */}

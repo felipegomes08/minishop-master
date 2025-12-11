@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  Store
+  Store,
+  Ticket
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -27,6 +28,7 @@ const navItems = [
   { path: '/categories', icon: FolderTree, label: 'Categorias' },
   { path: '/customers', icon: Users, label: 'Clientes' },
   { path: '/sales', icon: ShoppingCart, label: 'Vendas' },
+  { path: '/coupons', icon: Ticket, label: 'Cupons' },
   { path: '/settings', icon: Settings, label: 'Configurações' },
 ];
 

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
@@ -15,8 +16,12 @@ import {
   Users,
   Phone,
   MapPin,
-  Loader2
+  Loader2,
+  Ticket,
+  X
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Customer {
   id: string;
@@ -27,15 +32,31 @@ interface Customer {
   created_at: string;
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  is_active: boolean;
+}
+
+interface CustomerCoupon {
+  id: string;
+  coupon_id: string;
+  coupons: Coupon;
+}
+
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [customerCouponsMap, setCustomerCouponsMap] = useState<Record<string, CustomerCoupon[]>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedCouponToAdd, setSelectedCouponToAdd] = useState<string>('');
 
-  // Form state
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -43,30 +64,42 @@ export default function Customers() {
     notes: ''
   });
 
-  const fetchCustomers = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [customersRes, couponsRes, customerCouponsRes] = await Promise.all([
+        supabase.from('customers').select('*').order('created_at', { ascending: false }),
+        supabase.from('coupons').select('*').eq('is_active', true),
+        supabase.from('customer_coupons').select('*, coupons(*)')
+      ]);
 
-      if (error) throw error;
-      if (data) setCustomers(data);
+      if (customersRes.data) setCustomers(customersRes.data);
+      if (couponsRes.data) setCoupons(couponsRes.data);
+      
+      // Agrupar cupons por cliente
+      if (customerCouponsRes.data) {
+        const map: Record<string, CustomerCoupon[]> = {};
+        customerCouponsRes.data.forEach((cc: any) => {
+          if (!map[cc.customer_id]) map[cc.customer_id] = [];
+          map[cc.customer_id].push(cc);
+        });
+        setCustomerCouponsMap(map);
+      }
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
+      console.error('Erro ao buscar dados:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCustomers();
+    fetchData();
   }, []);
 
   const resetForm = () => {
     setFormData({ name: '', phone: '', address: '', notes: '' });
     setEditingCustomer(null);
+    setSelectedCouponToAdd('');
   };
 
   const openEditDialog = (customer: Customer) => {
@@ -117,7 +150,7 @@ export default function Customers() {
 
       setDialogOpen(false);
       resetForm();
-      fetchCustomers();
+      fetchData();
     } catch (error) {
       console.error('Erro ao salvar cliente:', error);
       toast({ title: 'Erro ao salvar cliente', variant: 'destructive' });
@@ -127,16 +160,54 @@ export default function Customers() {
   };
 
   const deleteCustomer = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
-
     try {
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
       toast({ title: 'Cliente excluído com sucesso' });
-      fetchCustomers();
+      fetchData();
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
       toast({ title: 'Erro ao excluir cliente', variant: 'destructive' });
+    }
+  };
+
+  const addCouponToCustomer = async (customerId: string, couponId: string) => {
+    try {
+      const { error } = await supabase
+        .from('customer_coupons')
+        .insert([{ customer_id: customerId, coupon_id: couponId }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast({ title: 'Cupom já vinculado a este cliente', variant: 'destructive' });
+        } else {
+          throw error;
+        }
+        return;
+      }
+      
+      toast({ title: 'Cupom adicionado ao cliente' });
+      setSelectedCouponToAdd('');
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao adicionar cupom:', error);
+      toast({ title: 'Erro ao adicionar cupom', variant: 'destructive' });
+    }
+  };
+
+  const removeCouponFromCustomer = async (customerCouponId: string) => {
+    try {
+      const { error } = await supabase
+        .from('customer_coupons')
+        .delete()
+        .eq('id', customerCouponId);
+
+      if (error) throw error;
+      toast({ title: 'Cupom removido do cliente' });
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao remover cupom:', error);
+      toast({ title: 'Erro ao remover cupom', variant: 'destructive' });
     }
   };
 
@@ -145,6 +216,12 @@ export default function Customers() {
     customer.phone?.includes(searchQuery) ||
     customer.address?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Cupons disponíveis para adicionar (não vinculados ao cliente)
+  const getAvailableCoupons = (customerId: string) => {
+    const linkedCouponIds = (customerCouponsMap[customerId] || []).map(cc => cc.coupon_id);
+    return coupons.filter(c => !linkedCouponIds.includes(c.id));
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -201,6 +278,62 @@ export default function Customers() {
                   rows={3}
                 />
               </div>
+
+              {/* Cupons vinculados - apenas na edição */}
+              {editingCustomer && (
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <Label className="flex items-center gap-2">
+                    <Ticket className="w-4 h-4" />
+                    Cupons do Cliente
+                  </Label>
+                  
+                  {/* Cupons vinculados */}
+                  <div className="flex flex-wrap gap-2">
+                    {(customerCouponsMap[editingCustomer.id] || []).map(cc => (
+                      <Badge key={cc.id} variant="secondary" className="gap-1 pr-1">
+                        {cc.coupons.code}
+                        <button
+                          type="button"
+                          onClick={() => removeCouponFromCustomer(cc.id)}
+                          className="ml-1 hover:bg-destructive/20 rounded p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {(customerCouponsMap[editingCustomer.id] || []).length === 0 && (
+                      <span className="text-sm text-muted-foreground">Nenhum cupom vinculado</span>
+                    )}
+                  </div>
+
+                  {/* Adicionar cupom */}
+                  {getAvailableCoupons(editingCustomer.id).length > 0 && (
+                    <div className="flex gap-2">
+                      <Select value={selectedCouponToAdd} onValueChange={setSelectedCouponToAdd}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Adicionar cupom..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getAvailableCoupons(editingCustomer.id).map(c => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.code} ({c.discount_type === 'percentage' ? `${c.discount_value}%` : `R$ ${c.discount_value}`})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        disabled={!selectedCouponToAdd}
+                        onClick={() => addCouponToCustomer(editingCustomer.id, selectedCouponToAdd)}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
@@ -267,14 +400,31 @@ export default function Customers() {
                   >
                     <Edit2 className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => deleteCustomer(customer.id)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir cliente?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteCustomer(customer.id)}>
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
 
@@ -291,6 +441,21 @@ export default function Customers() {
                     <span className="truncate">{customer.address}</span>
                   </div>
                 )}
+                
+                {/* Cupons do cliente */}
+                {(customerCouponsMap[customer.id] || []).length > 0 && (
+                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
+                    <Ticket className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <div className="flex flex-wrap gap-1">
+                      {customerCouponsMap[customer.id].map(cc => (
+                        <Badge key={cc.id} variant="outline" className="text-xs">
+                          {cc.coupons.code}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {customer.notes && (
                   <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                     {customer.notes}

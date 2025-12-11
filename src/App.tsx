@@ -12,6 +12,7 @@ import Products from "./pages/Products";
 import Categories from "./pages/Categories";
 import Customers from "./pages/Customers";
 import Sales from "./pages/Sales";
+import Coupons from "./pages/Coupons";
 import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
       <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+      <Route path="/coupons" element={<ProtectedRoute><Coupons /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

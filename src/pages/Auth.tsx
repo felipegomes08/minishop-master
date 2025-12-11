@@ -13,7 +13,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, signOut, user } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -30,10 +30,20 @@ export default function Auth() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user && !adminLoading && isAdmin) {
-      navigate('/');
+    if (user && !adminLoading) {
+      if (isAdmin) {
+        navigate('/');
+      } else {
+        // User is logged in but not admin - show error and sign out
+        toast({
+          title: 'Acesso negado',
+          description: 'Você não tem permissão de administrador.',
+          variant: 'destructive',
+        });
+        signOut();
+      }
     }
-  }, [user, isAdmin, adminLoading, navigate]);
+  }, [user, isAdmin, adminLoading, navigate, signOut]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -77,7 +77,7 @@ export default function Products() {
       if (productsRes.data) setProducts(productsRes.data);
       if (categoriesRes.data) setCategories(categoriesRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Erro ao buscar dados:', error);
     } finally {
       setLoading(false);
     }
@@ -142,10 +142,10 @@ export default function Products() {
       }
 
       setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
-      toast({ title: 'Images uploaded successfully' });
+      toast({ title: 'Imagens enviadas com sucesso' });
     } catch (error) {
-      console.error('Error uploading images:', error);
-      toast({ title: 'Error uploading images', variant: 'destructive' });
+      console.error('Erro ao enviar imagens:', error);
+      toast({ title: 'Erro ao enviar imagens', variant: 'destructive' });
     } finally {
       setUploading(false);
     }
@@ -162,7 +162,7 @@ export default function Products() {
     e.preventDefault();
     
     if (!formData.name || !formData.price) {
-      toast({ title: 'Name and price are required', variant: 'destructive' });
+      toast({ title: 'Nome e preço são obrigatórios', variant: 'destructive' });
       return;
     }
 
@@ -187,22 +187,22 @@ export default function Products() {
           .eq('id', editingProduct.id);
 
         if (error) throw error;
-        toast({ title: 'Product updated successfully' });
+        toast({ title: 'Produto atualizado com sucesso' });
       } else {
         const { error } = await supabase
           .from('products')
           .insert([productData]);
 
         if (error) throw error;
-        toast({ title: 'Product created successfully' });
+        toast({ title: 'Produto criado com sucesso' });
       }
 
       setDialogOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
-      console.error('Error saving product:', error);
-      toast({ title: 'Error saving product', variant: 'destructive' });
+      console.error('Erro ao salvar produto:', error);
+      toast({ title: 'Erro ao salvar produto', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -213,28 +213,28 @@ export default function Products() {
       const { id, created_at, ...productData } = product;
       const { error } = await supabase
         .from('products')
-        .insert([{ ...productData, name: `${product.name} (Copy)` }]);
+        .insert([{ ...productData, name: `${product.name} (Cópia)` }]);
 
       if (error) throw error;
-      toast({ title: 'Product duplicated successfully' });
+      toast({ title: 'Produto duplicado com sucesso' });
       fetchData();
     } catch (error) {
-      console.error('Error duplicating product:', error);
-      toast({ title: 'Error duplicating product', variant: 'destructive' });
+      console.error('Erro ao duplicar produto:', error);
+      toast({ title: 'Erro ao duplicar produto', variant: 'destructive' });
     }
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
 
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
-      toast({ title: 'Product deleted successfully' });
+      toast({ title: 'Produto excluído com sucesso' });
       fetchData();
     } catch (error) {
-      console.error('Error deleting product:', error);
-      toast({ title: 'Error deleting product', variant: 'destructive' });
+      console.error('Erro ao excluir produto:', error);
+      toast({ title: 'Erro ao excluir produto', variant: 'destructive' });
     }
   };
 
@@ -254,9 +254,9 @@ export default function Products() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'BRL'
     }).format(value);
   };
 
@@ -264,81 +264,81 @@ export default function Products() {
     <div className="space-y-6 animate-fade-in">
       <div className="page-header flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="page-title">Products</h1>
-          <p className="text-muted-foreground mt-1">Manage your product catalog</p>
+          <h1 className="page-title">Produtos</h1>
+          <p className="text-muted-foreground mt-1">Gerencie seu catálogo de produtos</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
               <Plus className="w-4 h-4" />
-              Add Product
+              Adicionar Produto
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingProduct ? 'Edit Product' : 'New Product'}</DialogTitle>
+              <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Name *</Label>
+                  <Label>Nome *</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Product name"
+                    placeholder="Nome do produto"
                   />
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Description</Label>
+                  <Label>Descrição</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Product description"
+                    placeholder="Descrição do produto"
                     rows={3}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Price *</Label>
+                  <Label>Preço *</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="0.00"
+                    placeholder="0,00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Promotional Price</Label>
+                  <Label>Preço Promocional</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={formData.promotional_price}
                     onChange={(e) => setFormData(prev => ({ ...prev, promotional_price: e.target.value }))}
-                    placeholder="Leave empty if no promotion"
+                    placeholder="Deixe vazio se não houver promoção"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Stock</Label>
+                  <Label>Estoque</Label>
                   <Input
                     type="number"
                     value={formData.stock}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                    placeholder="Optional"
+                    placeholder="Opcional"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Category</Label>
+                  <Label>Categoria</Label>
                   <Select
                     value={formData.category_id}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, category_id: value }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="Selecionar categoria" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map(cat => (
@@ -349,7 +349,7 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Images</Label>
+                  <Label>Imagens</Label>
                   <div className="flex flex-wrap gap-3">
                     {formData.images.map((img, index) => (
                       <div key={index} className="relative group">
@@ -390,17 +390,17 @@ export default function Products() {
                     checked={formData.is_active}
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
                   />
-                  <Label>Active</Label>
+                  <Label>Ativo</Label>
                 </div>
               </div>
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  {editingProduct ? 'Update' : 'Create'}
+                  {editingProduct ? 'Atualizar' : 'Criar'}
                 </Button>
               </div>
             </form>
@@ -413,7 +413,7 @@ export default function Products() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder="Buscar produtos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -421,10 +421,10 @@ export default function Products() {
         </div>
         <Select value={filterCategory} onValueChange={setFilterCategory}>
           <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Category" />
+            <SelectValue placeholder="Categoria" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">Todas Categorias</SelectItem>
             {categories.map(cat => (
               <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
             ))}
@@ -435,9 +435,9 @@ export default function Products() {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="active">Ativos</SelectItem>
+            <SelectItem value="inactive">Inativos</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -452,11 +452,11 @@ export default function Products() {
       ) : filteredProducts.length === 0 ? (
         <div className="text-center py-16">
           <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">No products found</h3>
+          <h3 className="text-lg font-medium">Nenhum produto encontrado</h3>
           <p className="text-muted-foreground mt-1">
             {searchQuery || filterCategory !== 'all' || filterStatus !== 'all' 
-              ? 'Try adjusting your filters'
-              : 'Add your first product to get started'
+              ? 'Tente ajustar seus filtros'
+              : 'Adicione seu primeiro produto para começar'
             }
           </p>
         </div>
@@ -488,7 +488,7 @@ export default function Products() {
                   )}
                   variant="outline"
                 >
-                  {product.is_active ? 'Active' : 'Inactive'}
+                  {product.is_active ? 'Ativo' : 'Inativo'}
                 </Badge>
               </div>
               <div className="p-4">
@@ -515,7 +515,7 @@ export default function Products() {
                     "text-sm mt-1",
                     product.stock <= 5 ? "text-destructive" : "text-muted-foreground"
                   )}>
-                    Stock: {product.stock}
+                    Estoque: {product.stock}
                   </p>
                 )}
                 <div className="flex gap-2 mt-4">
@@ -526,7 +526,7 @@ export default function Products() {
                     onClick={() => openEditDialog(product)}
                   >
                     <Edit2 className="w-3 h-3 mr-1" />
-                    Edit
+                    Editar
                   </Button>
                   <Button
                     variant="outline"

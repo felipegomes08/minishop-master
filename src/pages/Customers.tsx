@@ -54,7 +54,7 @@ export default function Customers() {
       if (error) throw error;
       if (data) setCustomers(data);
     } catch (error) {
-      console.error('Error fetching customers:', error);
+      console.error('Erro ao buscar clientes:', error);
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export default function Customers() {
     e.preventDefault();
     
     if (!formData.name) {
-      toast({ title: 'Name is required', variant: 'destructive' });
+      toast({ title: 'Nome é obrigatório', variant: 'destructive' });
       return;
     }
 
@@ -105,38 +105,38 @@ export default function Customers() {
           .eq('id', editingCustomer.id);
 
         if (error) throw error;
-        toast({ title: 'Customer updated successfully' });
+        toast({ title: 'Cliente atualizado com sucesso' });
       } else {
         const { error } = await supabase
           .from('customers')
           .insert([customerData]);
 
         if (error) throw error;
-        toast({ title: 'Customer created successfully' });
+        toast({ title: 'Cliente criado com sucesso' });
       }
 
       setDialogOpen(false);
       resetForm();
       fetchCustomers();
     } catch (error) {
-      console.error('Error saving customer:', error);
-      toast({ title: 'Error saving customer', variant: 'destructive' });
+      console.error('Erro ao salvar cliente:', error);
+      toast({ title: 'Erro ao salvar cliente', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
   const deleteCustomer = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return;
+    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
 
     try {
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
-      toast({ title: 'Customer deleted successfully' });
+      toast({ title: 'Cliente excluído com sucesso' });
       fetchCustomers();
     } catch (error) {
-      console.error('Error deleting customer:', error);
-      toast({ title: 'Error deleting customer', variant: 'destructive' });
+      console.error('Erro ao excluir cliente:', error);
+      toast({ title: 'Erro ao excluir cliente', variant: 'destructive' });
     }
   };
 
@@ -150,65 +150,65 @@ export default function Customers() {
     <div className="space-y-6 animate-fade-in">
       <div className="page-header flex-col sm:flex-row gap-4">
         <div>
-          <h1 className="page-title">Customers</h1>
-          <p className="text-muted-foreground mt-1">Manage your customer database</p>
+          <h1 className="page-title">Clientes</h1>
+          <p className="text-muted-foreground mt-1">Gerencie sua base de clientes</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
               <Plus className="w-4 h-4" />
-              Add Customer
+              Adicionar Cliente
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingCustomer ? 'Edit Customer' : 'New Customer'}</DialogTitle>
+              <DialogTitle>{editingCustomer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Name *</Label>
+                <Label>Nome *</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Customer name"
+                  placeholder="Nome do cliente"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Phone</Label>
+                <Label>Telefone</Label>
                 <Input
                   value={formData.phone}
                   onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Phone number"
+                  placeholder="Número de telefone"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Address</Label>
+                <Label>Endereço</Label>
                 <Input
                   value={formData.address}
                   onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Address"
+                  placeholder="Endereço"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Notes</Label>
+                <Label>Observações</Label>
                 <Textarea
                   value={formData.notes}
                   onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Additional notes"
+                  placeholder="Observações adicionais"
                   rows={3}
                 />
               </div>
 
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  Cancelar
                 </Button>
                 <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  {editingCustomer ? 'Update' : 'Create'}
+                  {editingCustomer ? 'Atualizar' : 'Criar'}
                 </Button>
               </div>
             </form>
@@ -220,7 +220,7 @@ export default function Customers() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
-          placeholder="Search customers..."
+          placeholder="Buscar clientes..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -237,9 +237,9 @@ export default function Customers() {
       ) : filteredCustomers.length === 0 ? (
         <div className="text-center py-16">
           <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">No customers found</h3>
+          <h3 className="text-lg font-medium">Nenhum cliente encontrado</h3>
           <p className="text-muted-foreground mt-1">
-            {searchQuery ? 'Try a different search term' : 'Add your first customer'}
+            {searchQuery ? 'Tente um termo de busca diferente' : 'Adicione seu primeiro cliente'}
           </p>
         </div>
       ) : (

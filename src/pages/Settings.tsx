@@ -11,7 +11,6 @@ import {
   Loader2,
   Palette
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface StoreSettings {
   id: string;
@@ -55,7 +54,7 @@ export default function Settings() {
         });
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      console.error('Erro ao buscar configurações:', error);
     } finally {
       setLoading(false);
     }
@@ -85,10 +84,10 @@ export default function Settings() {
         .getPublicUrl(fileName);
 
       setFormData(prev => ({ ...prev, logo_url: urlData.publicUrl }));
-      toast({ title: 'Logo uploaded successfully' });
+      toast({ title: 'Logo enviado com sucesso' });
     } catch (error) {
-      console.error('Error uploading logo:', error);
-      toast({ title: 'Error uploading logo', variant: 'destructive' });
+      console.error('Erro ao enviar logo:', error);
+      toast({ title: 'Erro ao enviar logo', variant: 'destructive' });
     } finally {
       setUploading(false);
     }
@@ -98,7 +97,7 @@ export default function Settings() {
     e.preventDefault();
     
     if (!formData.store_name) {
-      toast({ title: 'Store name is required', variant: 'destructive' });
+      toast({ title: 'Nome da loja é obrigatório', variant: 'destructive' });
       return;
     }
 
@@ -127,11 +126,11 @@ export default function Settings() {
         if (error) throw error;
       }
 
-      toast({ title: 'Settings saved successfully' });
+      toast({ title: 'Configurações salvas com sucesso' });
       fetchSettings();
     } catch (error) {
-      console.error('Error saving settings:', error);
-      toast({ title: 'Error saving settings', variant: 'destructive' });
+      console.error('Erro ao salvar configurações:', error);
+      toast({ title: 'Erro ao salvar configurações', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -150,8 +149,8 @@ export default function Settings() {
     <div className="space-y-6 animate-fade-in">
       <div className="page-header">
         <div>
-          <h1 className="page-title">Settings</h1>
-          <p className="text-muted-foreground mt-1">Configure your store preferences</p>
+          <h1 className="page-title">Configurações</h1>
+          <p className="text-muted-foreground mt-1">Configure as preferências da sua loja</p>
         </div>
       </div>
 
@@ -161,12 +160,12 @@ export default function Settings() {
           <div className="space-y-2">
             <Label className="flex items-center gap-2">
               <Store className="w-4 h-4" />
-              Store Name
+              Nome da Loja
             </Label>
             <Input
               value={formData.store_name}
               onChange={(e) => setFormData(prev => ({ ...prev, store_name: e.target.value }))}
-              placeholder="My Store"
+              placeholder="Minha Loja"
             />
           </div>
 
@@ -178,7 +177,7 @@ export default function Settings() {
                 {formData.logo_url ? (
                   <img 
                     src={formData.logo_url} 
-                    alt="Store logo" 
+                    alt="Logo da loja" 
                     className="w-full h-full object-contain"
                   />
                 ) : (
@@ -201,12 +200,12 @@ export default function Settings() {
                       ) : (
                         <Upload className="w-4 h-4" />
                       )}
-                      Upload Logo
+                      Enviar Logo
                     </span>
                   </Button>
                 </label>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Recommended: Square image, 256x256px
+                  Recomendado: Imagem quadrada, 256x256px
                 </p>
               </div>
             </div>
@@ -216,12 +215,12 @@ export default function Settings() {
           <div className="space-y-4">
             <Label className="flex items-center gap-2">
               <Palette className="w-4 h-4" />
-              Brand Colors
+              Cores da Marca
             </Label>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Primary Color</Label>
+                <Label className="text-sm text-muted-foreground">Cor Primária</Label>
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-lg border border-border cursor-pointer"
@@ -243,7 +242,7 @@ export default function Settings() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Secondary Color</Label>
+                <Label className="text-sm text-muted-foreground">Cor Secundária</Label>
                 <div className="flex items-center gap-3">
                   <div
                     className="w-10 h-10 rounded-lg border border-border cursor-pointer"
@@ -267,19 +266,19 @@ export default function Settings() {
 
             {/* Color Preview */}
             <div className="p-4 rounded-lg bg-secondary/30">
-              <p className="text-sm text-muted-foreground mb-3">Preview</p>
+              <p className="text-sm text-muted-foreground mb-3">Pré-visualização</p>
               <div className="flex items-center gap-3">
                 <div
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                   style={{ backgroundColor: formData.primary_color }}
                 >
-                  Primary Button
+                  Botão Primário
                 </div>
                 <div
                   className="px-4 py-2 rounded-lg text-sm font-medium text-white"
                   style={{ backgroundColor: formData.secondary_color }}
                 >
-                  Secondary Button
+                  Botão Secundário
                 </div>
               </div>
             </div>
@@ -288,7 +287,7 @@ export default function Settings() {
           <div className="pt-4">
             <Button type="submit" className="bg-accent hover:bg-accent/90" disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-              Save Changes
+              Salvar Alterações
             </Button>
           </div>
         </div>

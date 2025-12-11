@@ -9,6 +9,7 @@ import { VirtualTryOnDialog } from "@/components/catalog/VirtualTryOnDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ShoppingCart, Package, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 interface Product {
   id: string;
@@ -31,6 +32,7 @@ interface StoreSettings {
   store_name: string;
   logo_url?: string | null;
   primary_color?: string | null;
+  whatsapp_number?: string | null;
 }
 
 export default function ProductDetail() {
@@ -93,8 +95,39 @@ export default function ProductDetail() {
   };
 
   const handleBuyClick = () => {
-    // Ação futura: redirecionar para WhatsApp
-    console.log("Comprar produto:", product?.name);
+    if (!product) return;
+    
+    const whatsappNumber = storeSettings?.whatsapp_number?.replace(/\D/g, '');
+    if (!whatsappNumber) {
+      toast.error("WhatsApp não configurado", {
+        description: "A loja ainda não configurou o número de WhatsApp."
+      });
+      return;
+    }
+
+    const price = product.promotional_price || product.price;
+    const formattedPrice = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(price);
+
+    const productUrl = `${window.location.origin}/catalogo/produto/${product.id}`;
+    
+    const message = `Olá! 👋
+
+Tenho interesse neste produto:
+
+*${product.name}*
+💰 Preço: ${formattedPrice}
+
+📎 Link: ${productUrl}
+
+Poderia me dar mais informações?`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
   };
 
   if (loading) {

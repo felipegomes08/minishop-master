@@ -221,6 +221,7 @@ export type Database = {
           secondary_color: string | null
           store_name: string
           updated_at: string
+          whatsapp_number: string | null
         }
         Insert: {
           created_at?: string
@@ -230,6 +231,7 @@ export type Database = {
           secondary_color?: string | null
           store_name?: string
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Update: {
           created_at?: string
@@ -239,6 +241,7 @@ export type Database = {
           secondary_color?: string | null
           store_name?: string
           updated_at?: string
+          whatsapp_number?: string | null
         }
         Relationships: []
       }

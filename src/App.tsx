@@ -12,6 +12,8 @@ import Categories from "@/pages/Categories";
 import Customers from "@/pages/Customers";
 import Sales from "@/pages/Sales";
 import Settings from "@/pages/Settings";
+import Catalog from "@/pages/Catalog";
+import ProductDetail from "@/pages/ProductDetail";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Rotas Públicas - Catálogo */}
+      <Route path="/catalogo" element={<Catalog />} />
+      <Route path="/catalogo/produto/:id" element={<ProductDetail />} />
+      
+      {/* Rotas Administrativas */}
       <Route path="/auth" element={<Auth />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />

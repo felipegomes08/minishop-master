@@ -3,13 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { CategoryNav } from "@/components/catalog/CategoryNav";
 import { ProductCard } from "@/components/catalog/ProductCard";
+import { WhatsAppButton } from "@/components/catalog/WhatsAppButton";
+import { CatalogFooter } from "@/components/catalog/CatalogFooter";
 import { 
   CatalogHeaderSkeleton, 
   CategoryNavSkeleton, 
   ProductGridSkeleton 
 } from "@/components/catalog/CatalogSkeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package } from "lucide-react";
+import { Package, ShoppingBag } from "lucide-react";
 
 interface Product {
   id: string;
@@ -20,6 +22,7 @@ interface Product {
   stock?: number | null;
   category_id?: string | null;
   is_active?: boolean | null;
+  description?: string | null;
   created_at: string;
 }
 
@@ -34,6 +37,7 @@ interface StoreSettings {
   logo_url?: string | null;
   primary_color?: string | null;
   secondary_color?: string | null;
+  whatsapp_number?: string | null;
 }
 
 type SortOption = "name-asc" | "name-desc" | "price-asc" | "price-desc" | "newest";
@@ -72,6 +76,13 @@ export default function Catalog() {
     setLoading(false);
   };
 
+  // Obter o nome da categoria pelo ID
+  const getCategoryName = (categoryId: string | null | undefined) => {
+    if (!categoryId) return null;
+    const category = categories.find(cat => cat.id === categoryId);
+    return category?.name || null;
+  };
+
   // Obter todas as categorias filhas de uma categoria
   const getCategoryWithChildren = (categoryId: string): string[] => {
     const result = [categoryId];
@@ -90,7 +101,8 @@ export default function Catalog() {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(product => 
-        product.name.toLowerCase().includes(query)
+        product.name.toLowerCase().includes(query) ||
+        product.description?.toLowerCase().includes(query)
       );
     }
 
@@ -137,7 +149,7 @@ export default function Catalog() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <CatalogHeader
         storeName={storeSettings?.store_name || "Catálogo"}
         logoUrl={storeSettings?.logo_url}
@@ -146,7 +158,28 @@ export default function Catalog() {
         onSearchChange={setSearchQuery}
       />
 
-      <main className="container mx-auto px-4 py-6 space-y-6">
+      {/* Hero Banner */}
+      <div 
+        className="w-full py-8 px-4"
+        style={{ 
+          background: `linear-gradient(135deg, ${storeSettings?.primary_color || 'hsl(var(--primary))'}, ${storeSettings?.secondary_color || 'hsl(var(--primary))'})` 
+        }}
+      >
+        <div className="container mx-auto text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <ShoppingBag className="w-6 h-6 text-white/90" />
+            <span className="text-white/90 text-sm font-medium">Catálogo Online</span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Bem-vindo à {storeSettings?.store_name || "nossa loja"}!
+          </h1>
+          <p className="text-white/80 text-sm md:text-base">
+            Explore nossa coleção exclusiva de produtos
+          </p>
+        </div>
+      </div>
+
+      <main className="container mx-auto px-4 py-6 space-y-6 flex-1">
         {/* Navegação por Categorias */}
         {categories.length > 0 && (
           <CategoryNav
@@ -157,13 +190,13 @@ export default function Catalog() {
         )}
 
         {/* Barra de Filtros */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center justify-between gap-4 py-2 px-4 bg-muted/50 rounded-lg">
           <p className="text-sm text-muted-foreground">
-            {filteredProducts.length} {filteredProducts.length === 1 ? "produto" : "produtos"}
+            <span className="font-medium text-foreground">{filteredProducts.length}</span> {filteredProducts.length === 1 ? "produto" : "produtos"}
           </p>
           
           <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] bg-background">
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
@@ -178,7 +211,7 @@ export default function Catalog() {
 
         {/* Grid de Produtos */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-fade-in">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in">
             {filteredProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -188,6 +221,8 @@ export default function Catalog() {
                 promotionalPrice={product.promotional_price}
                 images={product.images}
                 stock={product.stock}
+                description={product.description}
+                categoryName={getCategoryName(product.category_id)}
               />
             ))}
           </div>
@@ -208,6 +243,17 @@ export default function Catalog() {
           </div>
         )}
       </main>
+
+      <CatalogFooter 
+        storeName={storeSettings?.store_name}
+        whatsappNumber={storeSettings?.whatsapp_number}
+        primaryColor={storeSettings?.primary_color}
+      />
+
+      <WhatsAppButton 
+        whatsappNumber={storeSettings?.whatsapp_number}
+        storeName={storeSettings?.store_name}
+      />
     </div>
   );
 }

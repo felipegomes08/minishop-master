@@ -50,7 +50,7 @@ export default function Coupons() {
   const [formData, setFormData] = useState({
     code: '',
     description: '',
-    discount_type: 'percentage' as 'percentage' | 'fixed',
+    discount_type: 'percentage' as string,
     discount_value: 0,
     min_purchase: 0,
     max_uses: '',
@@ -258,7 +258,7 @@ export default function Coupons() {
                   <Label>Tipo de Desconto</Label>
                   <Select 
                     value={formData.discount_type} 
-                    onValueChange={(value: 'percentage' | 'fixed') => setFormData(prev => ({ ...prev, discount_type: value }))}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, discount_type: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue />

@@ -17,7 +17,8 @@ import {
   Link2, 
   Plus,
   AlertCircle,
-  FileImage
+  FileImage,
+  Percent
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +58,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
   const [defaultCategoryId, setDefaultCategoryId] = useState<string>('');
+  const [profitMargin, setProfitMargin] = useState<string>('30');
   const [error, setError] = useState<string | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -67,6 +69,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
     setImagePreview(null);
     setExtractedProducts([]);
     setDefaultCategoryId('');
+    setProfitMargin('30');
     setError(null);
   };
 
@@ -149,15 +152,19 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
 
       // Create new products
       if (toCreate.length > 0) {
-        const newProducts = toCreate.map(p => ({
-          name: p.name,
-          cost_price: p.unitPrice,
-          price: 0,
-          stock: p.quantity,
-          category_id: defaultCategoryId || null,
-          is_active: true,
-          images: []
-        }));
+        const margin = parseFloat(profitMargin) || 0;
+        const newProducts = toCreate.map(p => {
+          const salePrice = p.unitPrice * (1 + margin / 100);
+          return {
+            name: p.name,
+            cost_price: p.unitPrice,
+            price: Math.round(salePrice * 100) / 100, // Round to 2 decimal places
+            stock: p.quantity,
+            category_id: defaultCategoryId || null,
+            is_active: true,
+            images: []
+          };
+        });
 
         const { error: insertError } = await supabase
           .from('products')
@@ -211,6 +218,11 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
 
   const newProductsCount = extractedProducts.filter(p => p.action === 'create').length;
   const updateProductsCount = extractedProducts.filter(p => p.action === 'link').length;
+  
+  const calculateSalePrice = (costPrice: number) => {
+    const margin = parseFloat(profitMargin) || 0;
+    return Math.round(costPrice * (1 + margin / 100) * 100) / 100;
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -324,26 +336,46 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
               </div>
             </div>
 
-            {/* Info about cost price */}
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/10 text-accent text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              O valor extraído será salvo como <strong>valor de compra</strong>. Defina o preço de venda depois na edição do produto.
+            {/* Margin and Category Settings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <Label className="whitespace-nowrap flex items-center gap-1">
+                  <Percent className="w-4 h-4" />
+                  Margem de lucro:
+                </Label>
+                <div className="relative flex-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={profitMargin}
+                    onChange={(e) => setProfitMargin(e.target.value)}
+                    className="pr-8"
+                    placeholder="30"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Label className="whitespace-nowrap">Categoria padrão:</Label>
+                <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Sem categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem categoria</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Default Category */}
-            <div className="flex items-center gap-3">
-              <Label className="whitespace-nowrap">Categoria padrão:</Label>
-              <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Sem categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem categoria</SelectItem>
-                  {categories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Info about pricing */}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-accent/10 text-accent text-sm">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              O valor extraído será salvo como <strong>valor de compra</strong>. O preço de venda será calculado com a margem definida.
             </div>
 
             {/* Products Table */}
@@ -354,6 +386,7 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                     <TableHead>Produto</TableHead>
                     <TableHead className="w-20 text-center">Qtd</TableHead>
                     <TableHead className="w-28">Custo Unit.</TableHead>
+                    <TableHead className="w-28">Preço Venda</TableHead>
                     <TableHead className="w-40">Status</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
@@ -384,6 +417,11 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                           onChange={(e) => updateProduct(index, { unitPrice: parseFloat(e.target.value) || 0 })}
                           className="h-8"
                         />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium text-success">
+                          {formatCurrency(calculateSalePrice(product.unitPrice))}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {product.similarProducts.length > 0 ? (

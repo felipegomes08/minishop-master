@@ -13,6 +13,7 @@ export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [justLoggedIn, setJustLoggedIn] = useState(false);
   const { signIn, signOut, user } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const navigate = useNavigate();
@@ -30,20 +31,32 @@ export default function Auth() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user && !adminLoading && isAdmin !== null) {
-      if (isAdmin) {
-        navigate('/');
-      } else {
-        // User is logged in but not admin - show error and sign out
-        toast({
-          title: 'Acesso negado',
-          description: 'Você não tem permissão de administrador.',
-          variant: 'destructive',
-        });
-        signOut();
-      }
+    // Only act on admin check results after the check has stabilized
+    if (!user || adminLoading || isAdmin === null) return;
+
+    if (isAdmin) {
+      setJustLoggedIn(false);
+      navigate('/');
+      return;
     }
-  }, [user, isAdmin, adminLoading, navigate, signOut]);
+
+    // If not admin and we just logged in, wait a bit and recheck
+    // This handles the race condition where the RPC might not see the role yet
+    if (justLoggedIn) {
+      const timeout = setTimeout(() => {
+        setJustLoggedIn(false);
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+
+    // Only sign out if we're sure the user is not admin (after waiting period)
+    toast({
+      title: 'Acesso negado',
+      description: 'Você não tem permissão de administrador.',
+      variant: 'destructive',
+    });
+    signOut();
+  }, [user, isAdmin, adminLoading, navigate, signOut, justLoggedIn]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +94,9 @@ export default function Auth() {
           description: message,
           variant: 'destructive',
         });
+      } else {
+        // Mark that we just logged in to prevent premature logout
+        setJustLoggedIn(true);
       }
     } catch (err) {
       toast({

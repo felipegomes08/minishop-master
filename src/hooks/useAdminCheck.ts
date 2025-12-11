@@ -45,8 +45,8 @@ export function useAdminCheck() {
       setIsAdmin(null);
       setLoading(true);
       
-      // Small delay to ensure auth token is fully propagated
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Longer delay to ensure auth token is fully propagated after login
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const result = await checkAdminRole(user.id);
       setIsAdmin(result);

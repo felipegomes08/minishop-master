@@ -5,9 +5,10 @@ import { ProductGallery } from "@/components/catalog/ProductGallery";
 import { PriceDisplay } from "@/components/catalog/PriceDisplay";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { ProductDetailSkeleton } from "@/components/catalog/CatalogSkeleton";
+import { VirtualTryOnDialog } from "@/components/catalog/VirtualTryOnDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShoppingCart, Package } from "lucide-react";
+import { ArrowLeft, ShoppingCart, Package, Sparkles } from "lucide-react";
 
 interface Product {
   id: string;
@@ -40,6 +41,7 @@ export default function ProductDetail() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [tryOnOpen, setTryOnOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -125,6 +127,7 @@ export default function ProductDetail() {
 
   const isOutOfStock = product.stock !== null && product.stock !== undefined && product.stock <= 0;
   const images = product.images || [];
+  const hasImages = images.length > 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -199,16 +202,30 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Botão Comprar */}
-            <Button 
-              size="lg" 
-              className="w-full"
-              disabled={isOutOfStock}
-              onClick={handleBuyClick}
-            >
-              <ShoppingCart className="w-5 h-5 mr-2" />
-              {isOutOfStock ? "Indisponível" : "Comprar"}
-            </Button>
+            {/* Botões de Ação */}
+            <div className="space-y-3">
+              {hasImages && (
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="w-full"
+                  onClick={() => setTryOnOpen(true)}
+                >
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Experimentar Online
+                </Button>
+              )}
+              
+              <Button 
+                size="lg" 
+                className="w-full"
+                disabled={isOutOfStock}
+                onClick={handleBuyClick}
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                {isOutOfStock ? "Indisponível" : "Comprar"}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -234,6 +251,18 @@ export default function ProductDetail() {
           </section>
         )}
       </main>
+
+      {/* Virtual Try-On Dialog */}
+      {hasImages && (
+        <VirtualTryOnDialog
+          open={tryOnOpen}
+          onOpenChange={setTryOnOpen}
+          productName={product.name}
+          productImage={images[0]}
+          categoryName={category?.name}
+          onBuyClick={handleBuyClick}
+        />
+      )}
     </div>
   );
 }

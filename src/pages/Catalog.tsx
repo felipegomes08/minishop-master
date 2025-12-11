@@ -11,7 +11,9 @@ import {
   ProductGridSkeleton 
 } from "@/components/catalog/CatalogSkeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, ShoppingBag } from "lucide-react";
+import { Package, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
+import useEmblaCarousel from "embla-carousel-react";
+import { useCallback } from "react";
 
 interface Product {
   id: string;
@@ -40,17 +42,59 @@ interface StoreSettings {
   whatsapp_number?: string | null;
 }
 
+interface Banner {
+  id: string;
+  image_url: string;
+  title: string | null;
+  link: string | null;
+}
+
 type SortOption = "name-asc" | "name-desc" | "price-asc" | "price-desc" | "newest";
 
 export default function Catalog() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [sortOption, setSortOption] = useState<SortOption>("newest");
+
+  // Carousel
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi]);
+  const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi]);
+
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCanScrollPrev(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    onSelect();
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    
+    // Auto-play
+    const autoplay = setInterval(() => {
+      if (emblaApi.canScrollNext()) {
+        emblaApi.scrollNext();
+      } else {
+        emblaApi.scrollTo(0);
+      }
+    }, 5000);
+
+    return () => {
+      clearInterval(autoplay);
+    };
+  }, [emblaApi, onSelect]);
 
   useEffect(() => {
     fetchData();
@@ -59,10 +103,11 @@ export default function Catalog() {
   const fetchData = async () => {
     setLoading(true);
     
-    const [productsRes, categoriesRes, settingsRes] = await Promise.all([
+    const [productsRes, categoriesRes, settingsRes, bannersRes] = await Promise.all([
       supabase.from("products").select("*").eq("is_active", true),
       supabase.from("categories").select("*").order("sort_order"),
-      supabase.from("store_settings").select("*").maybeSingle()
+      supabase.from("store_settings").select("*").maybeSingle(),
+      supabase.from("banners").select("*").eq("is_active", true).order("sort_order")
     ]);
 
     if (productsRes.data) setProducts(productsRes.data);
@@ -72,18 +117,17 @@ export default function Catalog() {
     } else {
       setStoreSettings({ store_name: "Catálogo" });
     }
+    if (bannersRes.data) setBanners(bannersRes.data);
     
     setLoading(false);
   };
 
-  // Obter o nome da categoria pelo ID
   const getCategoryName = (categoryId: string | null | undefined) => {
     if (!categoryId) return null;
     const category = categories.find(cat => cat.id === categoryId);
     return category?.name || null;
   };
 
-  // Obter todas as categorias filhas de uma categoria
   const getCategoryWithChildren = (categoryId: string): string[] => {
     const result = [categoryId];
     const children = categories.filter(cat => cat.parent_id === categoryId);
@@ -93,11 +137,9 @@ export default function Catalog() {
     return result;
   };
 
-  // Filtrar e ordenar produtos
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    // Filtro por busca
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(product => 
@@ -106,7 +148,6 @@ export default function Catalog() {
       );
     }
 
-    // Filtro por categoria (inclui subcategorias)
     if (selectedCategory) {
       const categoryIds = getCategoryWithChildren(selectedCategory);
       result = result.filter(product => 
@@ -114,7 +155,6 @@ export default function Catalog() {
       );
     }
 
-    // Ordenação
     switch (sortOption) {
       case "name-asc":
         result.sort((a, b) => a.name.localeCompare(b.name));
@@ -158,29 +198,91 @@ export default function Catalog() {
         onSearchChange={setSearchQuery}
       />
 
-      {/* Hero Banner */}
-      <div 
-        className="w-full py-8 px-4"
-        style={{ 
-          background: `linear-gradient(135deg, ${storeSettings?.primary_color || 'hsl(var(--primary))'}, ${storeSettings?.secondary_color || 'hsl(var(--primary))'})` 
-        }}
-      >
-        <div className="container mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <ShoppingBag className="w-6 h-6 text-white/90" />
-            <span className="text-white/90 text-sm font-medium">Catálogo Online</span>
+      {/* Banner Carousel ou Hero padrão */}
+      {banners.length > 0 ? (
+        <div className="relative w-full">
+          <div className="overflow-hidden" ref={emblaRef}>
+            <div className="flex">
+              {banners.map((banner) => (
+                <div 
+                  key={banner.id} 
+                  className="flex-[0_0_100%] min-w-0"
+                >
+                  {banner.link ? (
+                    <a href={banner.link} target="_blank" rel="noopener noreferrer">
+                      <img 
+                        src={banner.image_url} 
+                        alt={banner.title || 'Banner'} 
+                        className="w-full h-[200px] md:h-[300px] lg:h-[400px] object-cover"
+                      />
+                    </a>
+                  ) : (
+                    <img 
+                      src={banner.image_url} 
+                      alt={banner.title || 'Banner'} 
+                      className="w-full h-[200px] md:h-[300px] lg:h-[400px] object-cover"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-            Bem-vindo à {storeSettings?.store_name || "nossa loja"}!
-          </h1>
-          <p className="text-white/80 text-sm md:text-base">
-            Explore nossa coleção exclusiva de produtos
-          </p>
+          
+          {/* Navigation buttons */}
+          {banners.length > 1 && (
+            <>
+              <button
+                onClick={scrollPrev}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 flex items-center justify-center shadow-lg hover:bg-background transition-colors"
+                disabled={!canScrollPrev}
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={scrollNext}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-background/80 flex items-center justify-center shadow-lg hover:bg-background transition-colors"
+                disabled={!canScrollNext}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+              
+              {/* Dots indicator */}
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2">
+                {banners.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => emblaApi?.scrollTo(idx)}
+                    className="w-2 h-2 rounded-full bg-white/50 hover:bg-white/80 transition-colors"
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      </div>
+      ) : (
+        /* Hero Banner padrão */
+        <div 
+          className="w-full py-8 px-4"
+          style={{ 
+            background: `linear-gradient(135deg, ${storeSettings?.primary_color || 'hsl(var(--primary))'}, ${storeSettings?.secondary_color || 'hsl(var(--primary))'})` 
+          }}
+        >
+          <div className="container mx-auto text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <ShoppingBag className="w-6 h-6 text-white/90" />
+              <span className="text-white/90 text-sm font-medium">Catálogo Online</span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+              Bem-vindo à {storeSettings?.store_name || "nossa loja"}!
+            </h1>
+            <p className="text-white/80 text-sm md:text-base">
+              Explore nossa coleção exclusiva de produtos
+            </p>
+          </div>
+        </div>
+      )}
 
       <main className="container mx-auto px-4 py-6 space-y-6 flex-1">
-        {/* Navegação por Categorias */}
         {categories.length > 0 && (
           <CategoryNav
             categories={categories}
@@ -189,7 +291,6 @@ export default function Catalog() {
           />
         )}
 
-        {/* Barra de Filtros */}
         <div className="flex items-center justify-between gap-4 py-2 px-4 bg-muted/50 rounded-lg">
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{filteredProducts.length}</span> {filteredProducts.length === 1 ? "produto" : "produtos"}
@@ -209,7 +310,6 @@ export default function Catalog() {
           </Select>
         </div>
 
-        {/* Grid de Produtos */}
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-fade-in">
             {filteredProducts.map((product) => (

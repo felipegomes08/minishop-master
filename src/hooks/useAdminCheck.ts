@@ -15,7 +15,8 @@ export function useAdminCheck() {
         return;
       }
 
-      // Reset loading when user changes
+      // Reset states when user changes
+      setIsAdmin(null);
       setLoading(true);
       
       try {

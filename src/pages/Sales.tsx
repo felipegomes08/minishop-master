@@ -20,7 +20,9 @@ import {
   CalendarIcon,
   Loader2,
   Receipt,
-  Eye
+  Eye,
+  Ticket,
+  X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
@@ -44,10 +46,30 @@ interface CartItem {
   quantity: number;
 }
 
+interface Coupon {
+  id: string;
+  code: string;
+  discount_type: string;
+  discount_value: number;
+  min_purchase: number;
+  max_uses: number | null;
+  current_uses: number;
+  valid_until: string | null;
+  is_active: boolean;
+}
+
+interface CustomerCoupon {
+  coupon_id: string;
+  coupons: Coupon;
+}
+
 interface Sale {
   id: string;
   customer_id: string | null;
   total: number;
+  subtotal: number | null;
+  coupon_discount: number | null;
+  manual_discount: number | null;
   status: string;
   created_at: string;
   customers?: { name: string } | null;
@@ -58,6 +80,8 @@ export default function Sales() {
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [customerCoupons, setCustomerCoupons] = useState<CustomerCoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -65,6 +89,7 @@ export default function Sales() {
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [productSearch, setProductSearch] = useState('');
+  const [couponCode, setCouponCode] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 30),
     to: new Date()
@@ -73,6 +98,8 @@ export default function Sales() {
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [manualDiscount, setManualDiscount] = useState<number>(0);
 
   const fetchData = async () => {
     setLoading(true);
@@ -88,21 +115,44 @@ export default function Sales() {
       if (fromDate) salesQuery = salesQuery.gte('created_at', fromDate);
       if (toDate) salesQuery = salesQuery.lte('created_at', toDate);
 
-      const [salesRes, productsRes, customersRes] = await Promise.all([
+      const [salesRes, productsRes, customersRes, couponsRes] = await Promise.all([
         salesQuery,
         supabase.from('products').select('*').eq('is_active', true),
-        supabase.from('customers').select('id, name')
+        supabase.from('customers').select('id, name'),
+        supabase.from('coupons').select('*').eq('is_active', true)
       ]);
 
       if (salesRes.data) setSales(salesRes.data);
       if (productsRes.data) setProducts(productsRes.data);
       if (customersRes.data) setCustomers(customersRes.data);
+      if (couponsRes.data) setCoupons(couponsRes.data);
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Buscar cupons do cliente quando selecionado
+  useEffect(() => {
+    const fetchCustomerCoupons = async () => {
+      if (!selectedCustomer) {
+        setCustomerCoupons([]);
+        return;
+      }
+      
+      const { data } = await supabase
+        .from('customer_coupons')
+        .select('coupon_id, coupons(*)')
+        .eq('customer_id', selectedCustomer);
+      
+      if (data) {
+        setCustomerCoupons(data as unknown as CustomerCoupon[]);
+      }
+    };
+    
+    fetchCustomerCoupons();
+  }, [selectedCustomer]);
 
   useEffect(() => {
     fetchData();
@@ -112,6 +162,9 @@ export default function Sales() {
     setCart([]);
     setSelectedCustomer('');
     setProductSearch('');
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setManualDiscount(0);
   };
 
   const addToCart = (product: Product) => {
@@ -149,7 +202,72 @@ export default function Sales() {
     return product.promotional_price || product.price;
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + getPrice(item.product) * item.quantity, 0);
+  const cartSubtotal = cart.reduce((sum, item) => sum + getPrice(item.product) * item.quantity, 0);
+  
+  const couponDiscount = appliedCoupon 
+    ? appliedCoupon.discount_type === 'percentage'
+      ? (cartSubtotal * appliedCoupon.discount_value) / 100
+      : appliedCoupon.discount_value
+    : 0;
+  
+  const totalDiscount = couponDiscount + manualDiscount;
+  const cartTotal = Math.max(0, cartSubtotal - totalDiscount);
+
+  const applyCoupon = () => {
+    if (!couponCode.trim()) return;
+    
+    const coupon = coupons.find(c => c.code.toLowerCase() === couponCode.toLowerCase());
+    
+    if (!coupon) {
+      toast({ title: 'Cupom não encontrado', variant: 'destructive' });
+      return;
+    }
+
+    if (!coupon.is_active) {
+      toast({ title: 'Cupom inativo', variant: 'destructive' });
+      return;
+    }
+
+    if (coupon.valid_until && new Date(coupon.valid_until) < new Date()) {
+      toast({ title: 'Cupom expirado', variant: 'destructive' });
+      return;
+    }
+
+    if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+      toast({ title: 'Cupom esgotado', variant: 'destructive' });
+      return;
+    }
+
+    if (cartSubtotal < coupon.min_purchase) {
+      toast({ 
+        title: 'Valor mínimo não atingido', 
+        description: `Compra mínima: ${formatCurrency(coupon.min_purchase)}`,
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    setAppliedCoupon(coupon);
+    setCouponCode('');
+    toast({ title: 'Cupom aplicado!' });
+  };
+
+  const applyCustomerCoupon = (coupon: Coupon) => {
+    if (cartSubtotal < coupon.min_purchase) {
+      toast({ 
+        title: 'Valor mínimo não atingido', 
+        description: `Compra mínima: ${formatCurrency(coupon.min_purchase)}`,
+        variant: 'destructive' 
+      });
+      return;
+    }
+    setAppliedCoupon(coupon);
+    toast({ title: 'Cupom aplicado!' });
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+  };
 
   const handleCompleteSale = async () => {
     if (cart.length === 0) {
@@ -165,6 +283,10 @@ export default function Sales() {
         .from('sales')
         .insert([{
           customer_id: selectedCustomer || null,
+          subtotal: cartSubtotal,
+          coupon_id: appliedCoupon?.id || null,
+          coupon_discount: couponDiscount,
+          manual_discount: manualDiscount,
           total: cartTotal,
           status: 'concluída'
         }])
@@ -172,6 +294,14 @@ export default function Sales() {
         .single();
 
       if (saleError) throw saleError;
+
+      // Update coupon uses if applied
+      if (appliedCoupon) {
+        await supabase
+          .from('coupons')
+          .update({ current_uses: appliedCoupon.current_uses + 1 })
+          .eq('id', appliedCoupon.id);
+      }
 
       // Create sale items
       const saleItems = cart.map(item => ({
@@ -240,9 +370,9 @@ export default function Sales() {
             <DialogHeader>
               <DialogTitle>Nova Venda</DialogTitle>
             </DialogHeader>
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 overflow-hidden">
               {/* Products */}
-              <div className="flex flex-col overflow-hidden">
+              <div className="flex flex-col overflow-hidden min-w-0">
                 <div className="relative mb-4">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -252,7 +382,7 @@ export default function Sales() {
                     className="pl-10"
                   />
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                <div className="flex-1 overflow-y-auto space-y-2 pr-2 min-h-0">
                   {filteredProducts.map(product => (
                     <button
                       key={product.id}
@@ -284,8 +414,8 @@ export default function Sales() {
                         </div>
                       </div>
                       {product.stock !== null && (
-                        <Badge variant="outline" className="shrink-0">
-                          {product.stock} em estoque
+                        <Badge variant="outline" className="shrink-0 hidden sm:flex">
+                          {product.stock}
                         </Badge>
                       )}
                     </button>
@@ -294,10 +424,10 @@ export default function Sales() {
               </div>
 
               {/* Cart */}
-              <div className="flex flex-col bg-secondary/30 rounded-xl p-4 overflow-hidden">
+              <div className="flex flex-col bg-secondary/30 rounded-xl p-4 overflow-hidden min-w-0">
                 <h3 className="font-medium mb-4">Carrinho</h3>
                 
-                <div className="flex-1 overflow-y-auto space-y-3 mb-4">
+                <div className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0">
                   {cart.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -305,33 +435,33 @@ export default function Sales() {
                     </div>
                   ) : (
                     cart.map(item => (
-                      <div key={item.product.id} className="flex items-center gap-3 bg-card p-3 rounded-lg">
+                      <div key={item.product.id} className="flex items-center gap-2 bg-card p-3 rounded-lg">
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{item.product.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatCurrency(getPrice(item.product))} cada
+                          <p className="font-medium truncate text-sm">{item.product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCurrency(getPrice(item.product))}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={() => updateQuantity(item.product.id, -1)}
                           >
                             <Minus className="w-3 h-3" />
                           </Button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <span className="w-6 text-center text-sm font-medium">{item.quantity}</span>
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-7 w-7"
                             onClick={() => updateQuantity(item.product.id, 1)}
                           >
                             <Plus className="w-3 h-3" />
                           </Button>
                         </div>
-                        <p className="font-medium w-20 text-right">
+                        <p className="font-medium text-sm w-16 text-right shrink-0">
                           {formatCurrency(getPrice(item.product) * item.quantity)}
                         </p>
                       </div>
@@ -339,11 +469,12 @@ export default function Sales() {
                   )}
                 </div>
 
-                <div className="border-t border-border pt-4 space-y-4">
+                <div className="border-t border-border pt-4 space-y-3">
+                  {/* Cliente */}
                   <div className="space-y-2">
-                    <Label>Cliente (opcional)</Label>
+                    <Label className="text-xs">Cliente (opcional)</Label>
                     <Select value={selectedCustomer || "none"} onValueChange={(value) => setSelectedCustomer(value === "none" ? "" : value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9">
                         <SelectValue placeholder="Selecionar cliente" />
                       </SelectTrigger>
                       <SelectContent>
@@ -355,9 +486,96 @@ export default function Sales() {
                     </Select>
                   </div>
 
-                  <div className="flex items-center justify-between text-lg font-semibold">
-                    <span>Total</span>
-                    <span>{formatCurrency(cartTotal)}</span>
+                  {/* Cupons do cliente */}
+                  {selectedCustomer && customerCoupons.length > 0 && !appliedCoupon && (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cupons do cliente</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {customerCoupons.map(cc => (
+                          <Button
+                            key={cc.coupon_id}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs gap-1"
+                            onClick={() => applyCustomerCoupon(cc.coupons)}
+                          >
+                            <Ticket className="w-3 h-3" />
+                            {cc.coupons.code}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Aplicar Cupom */}
+                  {!appliedCoupon ? (
+                    <div className="space-y-2">
+                      <Label className="text-xs">Cupom de desconto</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          placeholder="Código do cupom"
+                          className="h-9 uppercase text-xs"
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={applyCoupon}
+                          disabled={!couponCode.trim()}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-success/10 p-2 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Ticket className="w-4 h-4 text-success" />
+                        <span className="text-sm font-medium">{appliedCoupon.code}</span>
+                        <span className="text-xs text-success">
+                          -{appliedCoupon.discount_type === 'percentage' 
+                            ? `${appliedCoupon.discount_value}%` 
+                            : formatCurrency(appliedCoupon.discount_value)
+                          }
+                        </span>
+                      </div>
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={removeCoupon}>
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Desconto Manual */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Desconto manual (R$)</Label>
+                    <Input
+                      type="number"
+                      value={manualDiscount || ''}
+                      onChange={(e) => setManualDiscount(parseFloat(e.target.value) || 0)}
+                      placeholder="0,00"
+                      className="h-9 text-xs"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  {/* Resumo */}
+                  <div className="space-y-1 text-sm pt-2 border-t border-border">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Subtotal</span>
+                      <span>{formatCurrency(cartSubtotal)}</span>
+                    </div>
+                    {totalDiscount > 0 && (
+                      <div className="flex justify-between text-success">
+                        <span>Desconto</span>
+                        <span>-{formatCurrency(totalDiscount)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-semibold text-base pt-1">
+                      <span>Total</span>
+                      <span>{formatCurrency(cartTotal)}</span>
+                    </div>
                   </div>
 
                   <Button
@@ -388,15 +606,17 @@ export default function Sales() {
         </div>
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 shrink-0">
               <CalendarIcon className="w-4 h-4" />
-              {dateRange?.from && dateRange?.to ? (
-                <>
-                  {format(dateRange.from, 'd MMM', { locale: ptBR })} - {format(dateRange.to, 'd MMM', { locale: ptBR })}
-                </>
-              ) : (
-                'Selecionar datas'
-              )}
+              <span className="hidden sm:inline">
+                {dateRange?.from && dateRange?.to ? (
+                  <>
+                    {format(dateRange.from, 'd MMM', { locale: ptBR })} - {format(dateRange.to, 'd MMM', { locale: ptBR })}
+                  </>
+                ) : (
+                  'Datas'
+                )}
+              </span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">
@@ -429,7 +649,7 @@ export default function Sales() {
       ) : (
         <div className="bg-card border border-border/50 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-secondary/30">
                   <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Data</th>
@@ -444,7 +664,7 @@ export default function Sales() {
                 {filteredSales.map(sale => (
                   <tr key={sale.id} className="border-b border-border/50 hover:bg-secondary/20 transition-colors">
                     <td className="px-4 py-3">
-                      <span className="font-medium">{format(new Date(sale.created_at), "d 'de' MMM, yyyy", { locale: ptBR })}</span>
+                      <span className="font-medium">{format(new Date(sale.created_at), "d 'de' MMM", { locale: ptBR })}</span>
                       <span className="text-muted-foreground text-sm block">
                         {format(new Date(sale.created_at), 'HH:mm', { locale: ptBR })}
                       </span>
@@ -512,9 +732,31 @@ export default function Sales() {
                 </div>
               </div>
 
-              <div className="border-t border-border pt-4 flex justify-between items-center">
-                <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-success">{formatCurrency(viewingSale.total)}</span>
+              <div className="border-t border-border pt-4 space-y-2 text-sm">
+                {viewingSale.subtotal && viewingSale.subtotal !== viewingSale.total && (
+                  <>
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Subtotal</span>
+                      <span>{formatCurrency(viewingSale.subtotal)}</span>
+                    </div>
+                    {(viewingSale.coupon_discount || 0) > 0 && (
+                      <div className="flex justify-between text-success">
+                        <span>Cupom</span>
+                        <span>-{formatCurrency(viewingSale.coupon_discount || 0)}</span>
+                      </div>
+                    )}
+                    {(viewingSale.manual_discount || 0) > 0 && (
+                      <div className="flex justify-between text-success">
+                        <span>Desconto manual</span>
+                        <span>-{formatCurrency(viewingSale.manual_discount || 0)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                <div className="flex justify-between items-center pt-2">
+                  <span className="font-semibold">Total</span>
+                  <span className="text-xl font-bold text-success">{formatCurrency(viewingSale.total)}</span>
+                </div>
               </div>
             </div>
           )}

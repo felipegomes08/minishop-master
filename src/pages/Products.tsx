@@ -574,14 +574,14 @@ export default function Products() {
                     <TableCell>
                       {isEditing ? (
                         <Select
-                          value={editingRow.category_id}
-                          onValueChange={(value) => setEditingRow(prev => prev ? { ...prev, category_id: value } : null)}
+                          value={editingRow.category_id || "none"}
+                          onValueChange={(value) => setEditingRow(prev => prev ? { ...prev, category_id: value === "none" ? "" : value } : null)}
                         >
                           <SelectTrigger className="h-8">
                             <SelectValue placeholder="Selecionar" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Sem categoria</SelectItem>
+                            <SelectItem value="none">Sem categoria</SelectItem>
                             {categories.map(cat => (
                               <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                             ))}

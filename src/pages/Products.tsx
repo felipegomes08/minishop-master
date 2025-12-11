@@ -7,6 +7,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -40,6 +50,7 @@ interface Product {
   description: string | null;
   price: number;
   promotional_price: number | null;
+  cost_price: number | null;
   stock: number | null;
   category_id: string | null;
   images: string[];
@@ -75,6 +86,7 @@ export default function Products() {
   const [editingRow, setEditingRow] = useState<EditingRow | null>(null);
   const [savingRow, setSavingRow] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -82,6 +94,7 @@ export default function Products() {
     description: '',
     price: '',
     promotional_price: '',
+    cost_price: '',
     stock: '',
     category_id: '',
     is_active: true,
@@ -115,6 +128,7 @@ export default function Products() {
       description: '',
       price: '',
       promotional_price: '',
+      cost_price: '',
       stock: '',
       category_id: '',
       is_active: true,
@@ -130,6 +144,7 @@ export default function Products() {
       description: product.description || '',
       price: product.price.toString(),
       promotional_price: product.promotional_price?.toString() || '',
+      cost_price: product.cost_price?.toString() || '',
       stock: product.stock?.toString() || '',
       category_id: product.category_id || '',
       is_active: product.is_active,
@@ -196,6 +211,7 @@ export default function Products() {
         description: formData.description || null,
         price: parseFloat(formData.price),
         promotional_price: formData.promotional_price ? parseFloat(formData.promotional_price) : null,
+        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
         stock: formData.stock ? parseInt(formData.stock) : null,
         category_id: formData.category_id || null,
         is_active: formData.is_active,
@@ -246,13 +262,14 @@ export default function Products() {
     }
   };
 
-  const deleteProduct = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete) return;
 
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase.from('products').delete().eq('id', productToDelete.id);
       if (error) throw error;
       toast({ title: 'Produto excluído com sucesso' });
+      setProductToDelete(null);
       fetchData();
     } catch (error) {
       console.error('Erro ao excluir produto:', error);
@@ -402,6 +419,17 @@ export default function Products() {
                     value={formData.promotional_price}
                     onChange={(e) => setFormData(prev => ({ ...prev, promotional_price: e.target.value }))}
                     placeholder="Deixe vazio se não houver promoção"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Valor de Compra</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.cost_price}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cost_price: e.target.value }))}
+                    placeholder="Valor pago ao fornecedor"
                   />
                 </div>
 
@@ -659,7 +687,7 @@ export default function Products() {
                                 <Copy className="w-4 h-4 mr-2" />
                                 Duplicar
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => deleteProduct(product.id)} className="text-destructive">
+                              <DropdownMenuItem onClick={() => setProductToDelete(product)} className="text-destructive">
                                 <Trash2 className="w-4 h-4 mr-2" />
                                 Excluir
                               </DropdownMenuItem>
@@ -866,7 +894,7 @@ export default function Products() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => deleteProduct(product.id)}
+                              onClick={() => setProductToDelete(product)}
                               title="Excluir"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -882,6 +910,27 @@ export default function Products() {
           </div>
         </>
       )}
+
+      {/* Alert Dialog de confirmação de exclusão */}
+      <AlertDialog open={!!productToDelete} onOpenChange={(open) => !open && setProductToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Produto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir "{productToDelete?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteProduct}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

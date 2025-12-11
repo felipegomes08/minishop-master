@@ -30,7 +30,7 @@ export default function Auth() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (user && !adminLoading) {
+    if (user && !adminLoading && isAdmin !== null) {
       if (isAdmin) {
         navigate('/');
       } else {

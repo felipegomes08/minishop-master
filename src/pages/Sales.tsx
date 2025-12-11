@@ -342,12 +342,12 @@ export default function Sales() {
                 <div className="border-t border-border pt-4 space-y-4">
                   <div className="space-y-2">
                     <Label>Cliente (opcional)</Label>
-                    <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
+                    <Select value={selectedCustomer || "none"} onValueChange={(value) => setSelectedCustomer(value === "none" ? "" : value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecionar cliente" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Sem cliente</SelectItem>
+                        <SelectItem value="none">Sem cliente</SelectItem>
                         {customers.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                         ))}

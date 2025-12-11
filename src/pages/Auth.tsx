@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdminCheck } from '@/hooks/useAdminCheck';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,18 +10,30 @@ import { toast } from '@/hooks/use-toast';
 import { Store, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
+  const { isAdmin, loading: adminLoading } = useAdminCheck();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    if (user) {
+    const error = searchParams.get('error');
+    if (error === 'unauthorized') {
+      toast({
+        title: 'Acesso negado',
+        description: 'Você não tem permissão de administrador.',
+        variant: 'destructive',
+      });
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (user && !adminLoading && isAdmin) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, isAdmin, adminLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,26 +59,17 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const { error } = isLogin 
-        ? await signIn(email, password)
-        : await signUp(email, password);
+      const { error } = await signIn(email, password);
 
       if (error) {
         let message = error.message;
         if (error.message.includes('Invalid login credentials')) {
           message = 'Email ou senha inválidos. Tente novamente.';
-        } else if (error.message.includes('User already registered')) {
-          message = 'Este email já está cadastrado. Faça login.';
         }
         toast({
           title: 'Erro',
           description: message,
           variant: 'destructive',
-        });
-      } else if (!isLogin) {
-        toast({
-          title: 'Conta criada',
-          description: 'Bem-vindo ao painel administrativo da sua loja!',
         });
       }
     } catch (err) {
@@ -92,14 +96,9 @@ export default function Auth() {
 
         <Card className="border-border/50 shadow-medium">
           <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">
-              {isLogin ? 'Bem-vindo de volta' : 'Criar conta'}
-            </CardTitle>
+            <CardTitle className="text-xl">Bem-vindo de volta</CardTitle>
             <CardDescription>
-              {isLogin 
-                ? 'Entre com suas credenciais para acessar o painel'
-                : 'Configure sua conta de administrador para começar'
-              }
+              Entre com suas credenciais para acessar o painel
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -135,7 +134,7 @@ export default function Auth() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10"
-                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    autoComplete="current-password"
                   />
                 </div>
               </div>
@@ -150,22 +149,9 @@ export default function Auth() {
                 ) : (
                   <ArrowRight className="w-4 h-4 mr-2" />
                 )}
-                {isLogin ? 'Entrar' : 'Criar Conta'}
+                Entrar
               </Button>
             </form>
-
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isLogin ? 'Não tem uma conta? ' : 'Já tem uma conta? '}
-                <span className="text-accent font-medium">
-                  {isLogin ? 'Cadastre-se' : 'Entrar'}
-                </span>
-              </button>
-            </div>
           </CardContent>
         </Card>
       </div>

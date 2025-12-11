@@ -21,9 +21,11 @@ import {
   X,
   Upload,
   Loader2,
-  Check
+  Check,
+  Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
 
 interface Product {
   id: string;
@@ -64,6 +66,7 @@ export default function Products() {
   const [uploading, setUploading] = useState(false);
   const [editingRow, setEditingRow] = useState<EditingRow | null>(null);
   const [savingRow, setSavingRow] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -329,13 +332,22 @@ export default function Products() {
           <h1 className="page-title">Produtos</h1>
           <p className="text-muted-foreground mt-1">Gerencie seu catálogo de produtos</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
-              <Plus className="w-4 h-4" />
-              Adicionar Produto
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <Camera className="w-4 h-4" />
+            Importar da Nota
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+            <DialogTrigger asChild>
+              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+                <Plus className="w-4 h-4" />
+                Adicionar Produto
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
@@ -468,7 +480,15 @@ export default function Products() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <ImportFromPhotoDialog 
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        categories={categories}
+        onSuccess={fetchData}
+      />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">

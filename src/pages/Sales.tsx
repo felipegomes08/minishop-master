@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
@@ -22,7 +23,8 @@ import {
   Receipt,
   Eye,
   Ticket,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DateRange } from 'react-day-picker';
@@ -73,7 +75,7 @@ interface Sale {
   status: string;
   created_at: string;
   customers?: { name: string } | null;
-  sale_items?: { product_name: string; quantity: number; unit_price: number; total_price: number }[];
+  sale_items?: { product_id: string; product_name: string; quantity: number; unit_price: number; total_price: number }[];
 }
 
 export default function Sales() {
@@ -100,6 +102,8 @@ export default function Sales() {
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [manualDiscount, setManualDiscount] = useState<number>(0);
+  const [deletingSaleId, setDeletingSaleId] = useState<string | null>(null);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -352,6 +356,67 @@ export default function Sales() {
     setViewDialogOpen(true);
   };
 
+  const deleteSale = async (sale: Sale) => {
+    setSaleToDelete(sale);
+  };
+
+  const confirmDeleteSale = async () => {
+    if (!saleToDelete) return;
+    
+    const sale = saleToDelete;
+    setSaleToDelete(null);
+
+    setDeletingSaleId(sale.id);
+
+    try {
+      // Restore stock for each item
+      if (sale.sale_items && sale.sale_items.length > 0) {
+        for (const item of sale.sale_items) {
+          if (item.product_id) {
+            // Get current stock
+            const { data: product } = await supabase
+              .from('products')
+              .select('stock')
+              .eq('id', item.product_id)
+              .single();
+
+            if (product && product.stock !== null) {
+              // Restore stock
+              await supabase
+                .from('products')
+                .update({ stock: product.stock + item.quantity })
+                .eq('id', item.product_id);
+            }
+          }
+        }
+      }
+
+      // Delete sale items first (foreign key constraint)
+      const { error: itemsError } = await supabase
+        .from('sale_items')
+        .delete()
+        .eq('sale_id', sale.id);
+
+      if (itemsError) throw itemsError;
+
+      // Delete the sale
+      const { error: saleError } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', sale.id);
+
+      if (saleError) throw saleError;
+
+      toast({ title: 'Venda excluída com sucesso! Estoque restaurado.' });
+      fetchData();
+    } catch (error) {
+      console.error('Erro ao excluir venda:', error);
+      toast({ title: 'Erro ao excluir venda', variant: 'destructive' });
+    } finally {
+      setDeletingSaleId(null);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header flex-col sm:flex-row gap-4">
@@ -424,10 +489,10 @@ export default function Sales() {
               </div>
 
               {/* Cart */}
-              <div className="flex flex-col bg-secondary/30 rounded-xl p-4 overflow-hidden min-w-0">
+              <div className="flex flex-col bg-secondary/30 rounded-xl p-4 overflow-y-auto min-w-0">
                 <h3 className="font-medium mb-4">Carrinho</h3>
                 
-                <div className="flex-1 overflow-y-auto space-y-3 mb-4 min-h-0">
+                <div className="overflow-y-auto space-y-3 mb-4 min-h-[120px] max-h-[200px]">
                   {cart.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -464,6 +529,14 @@ export default function Sales() {
                         <p className="font-medium text-sm w-16 text-right shrink-0">
                           {formatCurrency(getPrice(item.product) * item.quantity)}
                         </p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => removeFromCart(item.product.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     ))
                   )}
@@ -684,14 +757,29 @@ export default function Sales() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => viewSaleDetails(sale)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => viewSaleDetails(sale)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => deleteSale(sale)}
+                          disabled={deletingSaleId === sale.id}
+                        >
+                          {deletingSaleId === sale.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -762,6 +850,38 @@ export default function Sales() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!saleToDelete} onOpenChange={(open) => !open && setSaleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Excluir Venda</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Tem certeza que deseja excluir esta venda?</p>
+              {saleToDelete && (
+                <div className="bg-secondary/50 rounded-lg p-3 mt-2">
+                  <p className="font-medium">Valor: {formatCurrency(saleToDelete.total)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {saleToDelete.sale_items?.length || 0} item(ns) • {saleToDelete.customers?.name || 'Sem cliente'}
+                  </p>
+                </div>
+              )}
+              <p className="text-sm text-warning mt-2">
+                ⚠️ Os itens serão devolvidos ao estoque automaticamente.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              onClick={confirmDeleteSale}
+            >
+              Excluir Venda
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

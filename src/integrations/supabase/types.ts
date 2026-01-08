@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      attribute_options: {
+        Row: {
+          attribute_id: string
+          created_at: string
+          id: string
+          image_url: string | null
+          label: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          attribute_id: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          label: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          attribute_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          label?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attribute_options_attribute_id_fkey"
+            columns: ["attribute_id"]
+            isOneToOne: false
+            referencedRelation: "product_attributes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       banners: {
         Row: {
           created_at: string
@@ -195,6 +233,110 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      product_attributes: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_variant_options: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          variant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variant_options_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "attribute_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_variant_options_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          price_adjustment: number | null
+          product_id: string
+          sku: string | null
+          stock: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          price_adjustment?: number | null
+          product_id: string
+          sku?: string | null
+          stock?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          price_adjustment?: number | null
+          product_id?: string
+          sku?: string | null
+          stock?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       products: {
         Row: {

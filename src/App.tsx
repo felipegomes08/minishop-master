@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Products from "./pages/Products";
 import Categories from "./pages/Categories";
+import Attributes from "./pages/Attributes";
 import Customers from "./pages/Customers";
 import Sales from "./pages/Sales";
 import Coupons from "./pages/Coupons";
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
       <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+      <Route path="/attributes" element={<ProtectedRoute><Attributes /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
       <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
       <Route path="/coupons" element={<ProtectedRoute><Coupons /></ProtectedRoute>} />

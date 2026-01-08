@@ -6,6 +6,7 @@ import { PriceDisplay } from "@/components/catalog/PriceDisplay";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { ProductDetailSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { VirtualTryOnDialog } from "@/components/catalog/VirtualTryOnDialog";
+import { VariantSelector } from "@/components/catalog/VariantSelector";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, ShoppingCart, Package, Sparkles } from "lucide-react";
@@ -44,6 +45,8 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [tryOnOpen, setTryOnOpen] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<{ options: { label: string }[] } | null>(null);
+  const [displayPrice, setDisplayPrice] = useState(0);
 
   useEffect(() => {
     if (id) {
@@ -94,6 +97,11 @@ export default function ProductDetail() {
     setLoading(false);
   };
 
+  const handleVariantChange = (variant: { options: { label: string }[] } | null, finalPrice: number) => {
+    setSelectedVariant(variant);
+    setDisplayPrice(finalPrice);
+  };
+
   const handleBuyClick = () => {
     if (!product) return;
     
@@ -105,7 +113,7 @@ export default function ProductDetail() {
       return;
     }
 
-    const price = product.promotional_price || product.price;
+    const price = displayPrice || product.promotional_price || product.price;
     const formattedPrice = new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -113,11 +121,16 @@ export default function ProductDetail() {
 
     const productUrl = `${window.location.origin}/catalogo/produto/${product.id}`;
     
+    // Include variant info if selected
+    const variantInfo = selectedVariant?.options?.length 
+      ? `\n📦 Variante: ${selectedVariant.options.map(o => o.label).join(', ')}`
+      : '';
+    
     const message = `Olá! 👋
 
 Tenho interesse neste produto:
 
-*${product.name}*
+*${product.name}*${variantInfo}
 💰 Preço: ${formattedPrice}
 
 📎 Link: ${productUrl}
@@ -211,15 +224,22 @@ Poderia me dar mais informações?`;
 
             {/* Preço */}
             <PriceDisplay 
-              price={product.price} 
-              promotionalPrice={product.promotional_price} 
+              price={displayPrice || product.promotional_price || product.price} 
+              promotionalPrice={displayPrice ? undefined : product.promotional_price} 
               size="lg"
             />
 
-            {/* Disponibilidade */}
-            {isOutOfStock ? (
+            {/* Seletor de Variantes */}
+            <VariantSelector
+              productId={product.id}
+              basePrice={product.promotional_price || product.price}
+              onVariantChange={handleVariantChange}
+            />
+
+            {/* Disponibilidade (only show if no variants) */}
+            {!selectedVariant && isOutOfStock ? (
               <Badge variant="destructive">Produto indisponível</Badge>
-            ) : product.stock !== null && product.stock !== undefined ? (
+            ) : !selectedVariant && product.stock !== null && product.stock !== undefined ? (
               <p className="text-sm text-muted-foreground">
                 {product.stock} {product.stock === 1 ? "unidade disponível" : "unidades disponíveis"}
               </p>

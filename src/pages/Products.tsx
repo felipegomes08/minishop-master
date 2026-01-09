@@ -43,6 +43,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
+import { ProductVariantEditor } from '@/components/products/ProductVariantEditor';
 
 interface Product {
   id: string;
@@ -504,6 +505,20 @@ export default function Products() {
                   />
                   <Label>Ativo</Label>
                 </div>
+              </div>
+
+              {/* Product Variants Section */}
+              <div className="space-y-2 border-t pt-4">
+                <Label className="text-base font-semibold">Variantes do Produto</Label>
+                <p className="text-sm text-muted-foreground">
+                  {editingProduct 
+                    ? 'Adicione variantes com estoque e preço individual.' 
+                    : 'Salve o produto primeiro para adicionar variantes.'}
+                </p>
+                <ProductVariantEditor 
+                  productId={editingProduct?.id || null}
+                  basePrice={parseFloat(formData.price) || 0}
+                />
               </div>
 
               <div className="flex justify-end gap-3">

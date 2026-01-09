@@ -15,6 +15,20 @@ import { Package, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback } from "react";
 
+interface ProductVariant {
+  id: string;
+  product_id: string;
+  price_adjustment: number;
+  stock: number;
+  is_active: boolean;
+  options: {
+    id: string;
+    label: string;
+    image_url: string | null;
+    attribute_name: string;
+  }[];
+}
+
 interface Product {
   id: string;
   name: string;
@@ -26,6 +40,7 @@ interface Product {
   is_active?: boolean | null;
   description?: string | null;
   created_at: string;
+  variants?: ProductVariant[];
 }
 
 interface Category {
@@ -103,14 +118,39 @@ export default function Catalog() {
   const fetchData = async () => {
     setLoading(true);
     
-    const [productsRes, categoriesRes, settingsRes, bannersRes] = await Promise.all([
+    const [productsRes, categoriesRes, settingsRes, bannersRes, variantsRes, variantOptionsRes, attributesRes] = await Promise.all([
       supabase.from("products").select("*").eq("is_active", true),
       supabase.from("categories").select("*").order("sort_order"),
       supabase.from("store_settings").select("*").maybeSingle(),
-      supabase.from("banners").select("*").eq("is_active", true).order("sort_order")
+      supabase.from("banners").select("*").eq("is_active", true).order("sort_order"),
+      supabase.from("product_variants").select("*").eq("is_active", true),
+      supabase.from("product_variant_options").select("*, attribute_options(*)"),
+      supabase.from("product_attributes").select("*").eq("is_active", true)
     ]);
 
-    if (productsRes.data) setProducts(productsRes.data);
+    // Build variants with options
+    const variantsWithOptions: ProductVariant[] = (variantsRes.data || []).map(variant => {
+      const options = (variantOptionsRes.data || [])
+        .filter(vo => vo.variant_id === variant.id)
+        .map(vo => {
+          const attr = (attributesRes.data || []).find(a => a.id === vo.attribute_options?.attribute_id);
+          return {
+            id: vo.attribute_options?.id || '',
+            label: vo.attribute_options?.label || '',
+            image_url: vo.attribute_options?.image_url || null,
+            attribute_name: attr?.name || ''
+          };
+        });
+      return { ...variant, options };
+    });
+
+    // Attach variants to products
+    const productsWithVariants = (productsRes.data || []).map(product => ({
+      ...product,
+      variants: variantsWithOptions.filter(v => v.product_id === product.id)
+    }));
+
+    setProducts(productsWithVariants);
     if (categoriesRes.data) setCategories(categoriesRes.data);
     if (settingsRes.data) {
       setStoreSettings(settingsRes.data);
@@ -323,6 +363,7 @@ export default function Catalog() {
                 stock={product.stock}
                 description={product.description}
                 categoryName={getCategoryName(product.category_id)}
+                variants={product.variants}
               />
             ))}
           </div>

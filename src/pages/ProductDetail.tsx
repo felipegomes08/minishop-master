@@ -49,6 +49,7 @@ export default function ProductDetail() {
   const [displayPrice, setDisplayPrice] = useState(0);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (id) {
       fetchProduct(id);
     }

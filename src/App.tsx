@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useSuperAdminCheck } from "@/hooks/useSuperAdminCheck";
 import AdminLayout from "@/components/layout/AdminLayout";
+import MasterAdminLayout from "@/components/layout/MasterAdminLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Products from "./pages/Products";
@@ -19,6 +21,10 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
+import MasterDashboard from "./pages/master/MasterDashboard";
+import MasterCompanies from "./pages/master/MasterCompanies";
+import MasterUsers from "./pages/master/MasterUsers";
+import MasterSettings from "./pages/master/MasterSettings";
 
 const queryClient = new QueryClient();
 
@@ -45,12 +51,41 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <AdminLayout>{children}</AdminLayout>;
 }
 
+function MasterProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading: authLoading } = useAuth();
+  const { isSuperAdmin, loading: superAdminLoading } = useSuperAdminCheck();
+
+  if (authLoading || superAdminLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (!isSuperAdmin) {
+    return <Navigate to="/auth?error=unauthorized" replace />;
+  }
+
+  return <MasterAdminLayout>{children}</MasterAdminLayout>;
+}
+
 function AppRoutes() {
   return (
     <Routes>
       {/* Rotas Públicas - Catálogo */}
       <Route path="/catalogo" element={<Catalog />} />
       <Route path="/catalogo/produto/:id" element={<ProductDetail />} />
+      
+      {/* Rotas Master Admin */}
+      <Route path="/master" element={<MasterProtectedRoute><MasterDashboard /></MasterProtectedRoute>} />
+      <Route path="/master/companies" element={<MasterProtectedRoute><MasterCompanies /></MasterProtectedRoute>} />
+      <Route path="/master/users" element={<MasterProtectedRoute><MasterUsers /></MasterProtectedRoute>} />
+      <Route path="/master/settings" element={<MasterProtectedRoute><MasterSettings /></MasterProtectedRoute>} />
       
       {/* Rotas Administrativas */}
       <Route path="/auth" element={<Auth />} />

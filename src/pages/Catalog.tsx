@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
 import { CategoryNav } from "@/components/catalog/CategoryNav";
@@ -13,7 +14,6 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
 import useEmblaCarousel from "embla-carousel-react";
-import { useCallback } from "react";
 
 interface ProductVariant {
   id: string;
@@ -49,12 +49,15 @@ interface Category {
   parent_id?: string | null;
 }
 
-interface StoreSettings {
-  store_name: string;
-  logo_url?: string | null;
-  primary_color?: string | null;
-  secondary_color?: string | null;
-  whatsapp_number?: string | null;
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  whatsapp_number: string | null;
+  is_active: boolean;
 }
 
 interface Banner {
@@ -67,11 +70,13 @@ interface Banner {
 type SortOption = "name-asc" | "name-desc" | "price-asc" | "price-desc" | "newest";
 
 export default function Catalog() {
+  const { slug } = useParams<{ slug: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -112,20 +117,42 @@ export default function Catalog() {
   }, [emblaApi, onSelect]);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (slug) {
+      fetchData();
+    }
+  }, [slug]);
 
   const fetchData = async () => {
-    setLoading(true);
+    if (!slug) return;
     
-    const [productsRes, categoriesRes, settingsRes, bannersRes, variantsRes, variantOptionsRes, attributesRes] = await Promise.all([
-      supabase.from("products").select("*").eq("is_active", true),
-      supabase.from("categories").select("*").order("sort_order"),
-      supabase.from("store_settings").select("*").maybeSingle(),
-      supabase.from("banners").select("*").eq("is_active", true).order("sort_order"),
-      supabase.from("product_variants").select("*").eq("is_active", true),
+    setLoading(true);
+    setNotFound(false);
+    
+    // First fetch the company by slug
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
+    
+    if (companyError || !companyData) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    
+    setCompany(companyData);
+    const companyId = companyData.id;
+    
+    // Now fetch all data filtered by company_id
+    const [productsRes, categoriesRes, bannersRes, variantsRes, variantOptionsRes, attributesRes] = await Promise.all([
+      supabase.from("products").select("*").eq("is_active", true).eq("company_id", companyId),
+      supabase.from("categories").select("*").eq("company_id", companyId).order("sort_order"),
+      supabase.from("banners").select("*").eq("is_active", true).eq("company_id", companyId).order("sort_order"),
+      supabase.from("product_variants").select("*").eq("is_active", true).eq("company_id", companyId),
       supabase.from("product_variant_options").select("*, attribute_options(*)"),
-      supabase.from("product_attributes").select("*").eq("is_active", true)
+      supabase.from("product_attributes").select("*").eq("is_active", true).eq("company_id", companyId)
     ]);
 
     // Build variants with options
@@ -152,11 +179,6 @@ export default function Catalog() {
 
     setProducts(productsWithVariants);
     if (categoriesRes.data) setCategories(categoriesRes.data);
-    if (settingsRes.data) {
-      setStoreSettings(settingsRes.data);
-    } else {
-      setStoreSettings({ store_name: "Catálogo" });
-    }
     if (bannersRes.data) setBanners(bannersRes.data);
     
     setLoading(false);
@@ -216,6 +238,10 @@ export default function Catalog() {
     return result;
   }, [products, searchQuery, selectedCategory, sortOption, categories]);
 
+  if (notFound) {
+    return <Navigate to="/" replace />;
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -231,9 +257,9 @@ export default function Catalog() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <CatalogHeader
-        storeName={storeSettings?.store_name || "Catálogo"}
-        logoUrl={storeSettings?.logo_url}
-        primaryColor={storeSettings?.primary_color}
+        storeName={company?.name || "Catálogo"}
+        logoUrl={company?.logo_url}
+        primaryColor={company?.primary_color}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -304,7 +330,7 @@ export default function Catalog() {
         <div 
           className="w-full py-8 px-4"
           style={{ 
-            background: `linear-gradient(135deg, ${storeSettings?.primary_color || 'hsl(var(--primary))'}, ${storeSettings?.secondary_color || 'hsl(var(--primary))'})` 
+            background: `linear-gradient(135deg, ${company?.primary_color || 'hsl(var(--primary))'}, ${company?.secondary_color || 'hsl(var(--primary))'})` 
           }}
         >
           <div className="container mx-auto text-center">
@@ -313,7 +339,7 @@ export default function Catalog() {
               <span className="text-white/90 text-sm font-medium">Catálogo Online</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              Bem-vindo à {storeSettings?.store_name || "nossa loja"}!
+              Bem-vindo à {company?.name || "nossa loja"}!
             </h1>
             <p className="text-white/80 text-sm md:text-base">
               Explore nossa coleção exclusiva de produtos
@@ -386,14 +412,14 @@ export default function Catalog() {
       </main>
 
       <CatalogFooter 
-        storeName={storeSettings?.store_name}
-        whatsappNumber={storeSettings?.whatsapp_number}
-        primaryColor={storeSettings?.primary_color}
+        storeName={company?.name}
+        whatsappNumber={company?.whatsapp_number}
+        primaryColor={company?.primary_color}
       />
 
       <WhatsAppButton 
-        whatsappNumber={storeSettings?.whatsapp_number}
-        storeName={storeSettings?.store_name}
+        whatsappNumber={company?.whatsapp_number}
+        storeName={company?.name}
       />
     </div>
   );

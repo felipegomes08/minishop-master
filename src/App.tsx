@@ -78,8 +78,8 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Rotas Públicas - Catálogo */}
-      <Route path="/catalogo" element={<Catalog />} />
-      <Route path="/catalogo/produto/:id" element={<ProductDetail />} />
+      <Route path="/catalogo/:slug" element={<Catalog />} />
+      <Route path="/catalogo/:slug/produto/:id" element={<ProductDetail />} />
       
       {/* Rotas Master Admin */}
       <Route path="/master" element={<MasterProtectedRoute><MasterDashboard /></MasterProtectedRoute>} />

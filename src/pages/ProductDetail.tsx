@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductGallery } from "@/components/catalog/ProductGallery";
 import { PriceDisplay } from "@/components/catalog/PriceDisplay";
@@ -22,6 +22,7 @@ interface Product {
   stock?: number | null;
   category_id?: string | null;
   is_active?: boolean | null;
+  company_id?: string | null;
 }
 
 interface Category {
@@ -29,19 +30,21 @@ interface Category {
   name: string;
 }
 
-interface StoreSettings {
-  store_name: string;
-  logo_url?: string | null;
-  primary_color?: string | null;
-  whatsapp_number?: string | null;
+interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  whatsapp_number: string | null;
 }
 
 export default function ProductDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { slug, id } = useParams<{ slug: string; id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
+  const [company, setCompany] = useState<Company | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [tryOnOpen, setTryOnOpen] = useState(false);
@@ -50,44 +53,64 @@ export default function ProductDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    if (id) {
-      fetchProduct(id);
+    if (id && slug) {
+      fetchProduct(id, slug);
     }
-  }, [id]);
+  }, [id, slug]);
 
-  const fetchProduct = async (productId: string) => {
+  const fetchProduct = async (productId: string, companySlug: string) => {
     setLoading(true);
     setNotFound(false);
 
-    const [productRes, settingsRes] = await Promise.all([
-      supabase.from("products").select("*").eq("id", productId).eq("is_active", true).maybeSingle(),
-      supabase.from("store_settings").select("*").maybeSingle()
-    ]);
+    // First get the company
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("slug", companySlug)
+      .eq("is_active", true)
+      .maybeSingle();
+    
+    if (companyError || !companyData) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    
+    setCompany(companyData);
 
-    if (!productRes.data) {
+    // Then get the product (ensuring it belongs to this company)
+    const { data: productData } = await supabase
+      .from("products")
+      .select("*")
+      .eq("id", productId)
+      .eq("is_active", true)
+      .eq("company_id", companyData.id)
+      .maybeSingle();
+
+    if (!productData) {
       setNotFound(true);
       setLoading(false);
       return;
     }
 
-    setProduct(productRes.data);
-    if (settingsRes.data) setStoreSettings(settingsRes.data);
+    setProduct(productData);
 
     // Buscar categoria
-    if (productRes.data.category_id) {
+    if (productData.category_id) {
       const categoryRes = await supabase
         .from("categories")
         .select("*")
-        .eq("id", productRes.data.category_id)
+        .eq("id", productData.category_id)
         .maybeSingle();
       
       if (categoryRes.data) setCategory(categoryRes.data);
 
-      // Buscar produtos relacionados (mesma categoria)
+      // Buscar produtos relacionados (mesma categoria e empresa)
       const relatedRes = await supabase
         .from("products")
         .select("*")
-        .eq("category_id", productRes.data.category_id)
+        .eq("category_id", productData.category_id)
+        .eq("company_id", companyData.id)
         .eq("is_active", true)
         .neq("id", productId)
         .limit(4);
@@ -106,7 +129,7 @@ export default function ProductDetail() {
   const handleBuyClick = () => {
     if (!product) return;
     
-    const whatsappNumber = storeSettings?.whatsapp_number?.replace(/\D/g, '');
+    const whatsappNumber = company?.whatsapp_number?.replace(/\D/g, '');
     if (!whatsappNumber) {
       toast.error("WhatsApp não configurado", {
         description: "A loja ainda não configurou o número de WhatsApp."
@@ -120,7 +143,7 @@ export default function ProductDetail() {
       currency: 'BRL'
     }).format(price);
 
-    const productUrl = `${window.location.origin}/catalogo/produto/${product.id}`;
+    const productUrl = `${window.location.origin}/catalogo/${slug}/produto/${product.id}`;
     
     // Include variant info if selected
     const variantInfo = selectedVariant?.options?.length 
@@ -162,7 +185,7 @@ Poderia me dar mais informações?`;
         <p className="text-muted-foreground mb-6 text-center">
           O produto que você está procurando não existe ou não está mais disponível.
         </p>
-        <Link to="/catalogo">
+        <Link to={`/catalogo/${slug}`}>
           <Button>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar ao catálogo
@@ -182,21 +205,21 @@ Poderia me dar mais informações?`;
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-4">
-            <Link to="/catalogo">
+            <Link to={`/catalogo/${slug}`}>
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <Link to="/catalogo" className="flex items-center gap-2">
-              {storeSettings?.logo_url ? (
+            <Link to={`/catalogo/${slug}`} className="flex items-center gap-2">
+              {company?.logo_url ? (
                 <img 
-                  src={storeSettings.logo_url} 
-                  alt={storeSettings.store_name} 
+                  src={company.logo_url} 
+                  alt={company.name} 
                   className="h-8 w-8 rounded-lg object-contain"
                 />
               ) : null}
               <span className="font-semibold text-foreground">
-                {storeSettings?.store_name || "Catálogo"}
+                {company?.name || "Catálogo"}
               </span>
             </Link>
           </div>

@@ -31,8 +31,9 @@ const queryClient = new QueryClient();
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const { isSuperAdmin, loading: superAdminLoading } = useSuperAdminCheck();
 
-  if (authLoading || adminLoading) {
+  if (authLoading || adminLoading || superAdminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -42,6 +43,11 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Super admins should use the master panel, not company panel
+  if (isSuperAdmin) {
+    return <Navigate to="/master" replace />;
   }
 
   if (!isAdmin) {

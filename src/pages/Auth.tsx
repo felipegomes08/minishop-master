@@ -64,6 +64,21 @@ export default function Auth() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (user) {
+        // Check if user is super admin first
+        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
+          _user_id: user.id
+        });
+
+        if (isSuperAdmin) {
+          toast({
+            title: 'Bem-vindo, Master Admin!',
+            description: 'Login realizado com sucesso.',
+          });
+          navigate('/master');
+          return;
+        }
+
+        // Check if user is regular admin
         const { data: isAdmin } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin'

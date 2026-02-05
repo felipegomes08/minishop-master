@@ -390,6 +390,7 @@ export default function Catalog() {
                 description={product.description}
                 categoryName={getCategoryName(product.category_id)}
                 variants={product.variants}
+                companySlug={slug}
               />
             ))}
           </div>

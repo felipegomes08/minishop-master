@@ -15,8 +15,10 @@ import {
   RefreshCw,
   ShoppingCart,
   AlertCircle,
-  Wand2
+  Wand2,
+  Maximize2
 } from "lucide-react";
+import { ImageZoomModal } from "./ImageZoomModal";
 
 interface VirtualTryOnDialogProps {
   open: boolean;
@@ -42,6 +44,8 @@ export function VirtualTryOnDialog({
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [zoomModalOpen, setZoomModalOpen] = useState(false);
+  const [zoomImageIndex, setZoomImageIndex] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +56,8 @@ export function VirtualTryOnDialog({
     setGeneratedImage(null);
     setError(null);
     setIsProcessing(false);
+    setZoomModalOpen(false);
+    setZoomImageIndex(0);
   }, []);
 
   const handleClose = useCallback(() => {
@@ -174,8 +180,17 @@ export function VirtualTryOnDialog({
     return 'Tire uma foto bem iluminada mostrando onde o produto será usado.';
   };
 
+  // Imagens para o zoom modal (foto original e gerada)
+  const zoomImages = [userPhoto, generatedImage].filter(Boolean) as string[];
+
+  const handleViewImage = (index: number) => {
+    setZoomImageIndex(index);
+    setZoomModalOpen(true);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <>
+    <Dialog open={open && !zoomModalOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         {/* Step: Intro */}
         {step === 'intro' && (
@@ -358,25 +373,42 @@ export function VirtualTryOnDialog({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground text-center">Sua foto</p>
-                  <div className="aspect-square rounded-lg overflow-hidden border border-border">
+                  <button 
+                    onClick={() => handleViewImage(0)}
+                    className="aspect-square rounded-lg overflow-hidden border border-border w-full relative group cursor-pointer"
+                  >
                     <img 
                       src={userPhoto!} 
                       alt="Foto original" 
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Maximize2 className="h-6 w-6 text-white" />
+                    </div>
+                  </button>
                 </div>
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground text-center">Com a peça</p>
-                  <div className="aspect-square rounded-lg overflow-hidden border-2 border-primary">
+                  <button 
+                    onClick={() => handleViewImage(1)}
+                    className="aspect-square rounded-lg overflow-hidden border-2 border-primary w-full relative group cursor-pointer"
+                  >
                     <img 
                       src={generatedImage} 
                       alt="Com o produto" 
                       className="w-full h-full object-cover"
                     />
-                  </div>
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Maximize2 className="h-6 w-6 text-white" />
+                    </div>
+                  </button>
                 </div>
               </div>
+
+              {/* Dica de zoom */}
+              <p className="text-xs text-muted-foreground text-center">
+                Toque nas imagens para ampliar
+              </p>
 
               {/* Ações */}
               <div className="flex gap-2">
@@ -414,5 +446,16 @@ export function VirtualTryOnDialog({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Modal de Zoom */}
+    <ImageZoomModal
+      images={zoomImages}
+      currentIndex={zoomImageIndex}
+      productName={productName}
+      isOpen={zoomModalOpen}
+      onClose={() => setZoomModalOpen(false)}
+      onIndexChange={setZoomImageIndex}
+    />
+    </>
   );
 }

@@ -31,6 +31,7 @@ interface ProductCardProps {
   categoryName?: string | null;
   className?: string;
   variants?: ProductVariant[];
+  companySlug?: string;
 }
 
 export function ProductCard({
@@ -43,7 +44,8 @@ export function ProductCard({
   description,
   categoryName,
   className,
-  variants = []
+  variants = [],
+  companySlug
 }: ProductCardProps) {
   const hasPromotion = promotionalPrice && promotionalPrice < price;
   const imageUrl = images && images.length > 0 ? images[0] : "/placeholder.svg";
@@ -85,7 +87,7 @@ export function ProductCard({
   const optionsByAttribute = hasVariants ? getUniqueOptionsByAttribute() : new Map();
 
   return (
-    <Link to={`/catalogo/produto/${id}`}>
+    <Link to={companySlug ? `/catalogo/${companySlug}/produto/${id}` : `/catalogo/produto/${id}`}>
       <Card className={cn(
         "group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 h-full",
         isOutOfStock && "opacity-70",

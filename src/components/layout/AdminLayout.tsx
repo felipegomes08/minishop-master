@@ -52,11 +52,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          'hidden lg:flex flex-col bg-sidebar transition-all duration-300 ease-in-out',
+          'hidden lg:flex flex-col bg-sidebar transition-all duration-300 ease-in-out shrink-0',
           sidebarOpen ? 'w-64' : 'w-20'
         )}
       >
@@ -179,9 +179,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
-        <header className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card">
+        <header className="lg:hidden flex items-center justify-between p-4 border-b border-border bg-card shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -199,7 +199,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-auto">
+        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           {children}
         </main>
       </div>

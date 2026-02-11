@@ -65,31 +65,35 @@ export default function Auth() {
       
       if (user) {
         // Check if user is super admin first
-        const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
+        const { data: isSuperAdmin, error: superAdminError } = await supabase.rpc('is_super_admin', {
           _user_id: user.id
         });
 
-        if (isSuperAdmin) {
+        console.log('Super admin check:', { isSuperAdmin, superAdminError });
+
+        if (isSuperAdmin === true) {
           toast({
             title: 'Bem-vindo, Master Admin!',
             description: 'Login realizado com sucesso.',
           });
-          navigate('/master');
+          navigate('/master', { replace: true });
           return;
         }
 
         // Check if user is regular admin
-        const { data: isAdmin } = await supabase.rpc('has_role', {
+        const { data: isAdmin, error: adminError } = await supabase.rpc('has_role', {
           _user_id: user.id,
           _role: 'admin'
         });
+
+        console.log('Admin check:', { isAdmin, adminError });
 
         if (isAdmin) {
           toast({
             title: 'Bem-vindo!',
             description: 'Login realizado com sucesso.',
           });
-          navigate('/');
+          navigate('/', { replace: true });
         } else {
           toast({
             title: 'Acesso negado',

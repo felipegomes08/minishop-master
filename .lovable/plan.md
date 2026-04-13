@@ -1,74 +1,70 @@
-# Plano: Configurar Super Admin e Primeira Empresa Cliente ✅
+
+
+# Landing Page "Lojix" — Plano de Implementação
 
 ## Resumo
-Felipe Gomes é o administrador supremo da plataforma SaaS, com acesso total ao painel Master. A Shine Pratas é a primeira empresa cliente, com seu próprio admin (shine925pratas@gmail.com).
 
----
+Criar uma landing page completa e persuasiva em `/landing` como nova rota pública no app React existente. A página terá 12 seções conforme especificado, com tema escuro (navy profundo), acentos em roxo/azul elétrico, animações de scroll e design mobile-first.
 
-## Fase 1: Criar Usuário Super Admin ✅
+## Arquitetura
 
-### 1.1 Usuário criado via Edge Function
-- Email: felipecgomes01@hotmail.com
-- Senha: Felipe01
-- user_id: 87d8bb24-6c63-4309-be09-522108938dab
+- **Nova rota**: `/landing` (pública, sem autenticação)
+- **Página principal**: `src/pages/Landing.tsx` — orquestra todas as seções
+- **Componentes**: `src/components/landing/` — uma pasta dedicada com um componente por seção
+- **Rota raiz**: Redirecionar `/` para `/landing` (ao invés do dashboard protegido, que passará para `/dashboard`)
 
-### 1.2 Registrado como Super Admin ✅
-- Inserido na tabela `master_admins` com role `super_admin`
+## Estrutura de Componentes
 
----
+```text
+src/components/landing/
+├── LandingHeader.tsx      (navbar fixa com logo + links âncora + CTA)
+├── HeroSection.tsx        (headline, subheadline, CTA, mockup, prova social)
+├── ProblemSolutionSection.tsx  (dores do lojista → solução Lojix)
+├── VirtualTryOnSection.tsx     (destaque IA, badge exclusivo, fluxo ilustrado)
+├── PhotoImporterSection.tsx    (importador por foto com IA)
+├── AIInsightsSection.tsx       (insights automáticos)
+├── FeaturesGrid.tsx            (grade de 9 cards com ícones)
+├── CatalogSection.tsx          (catálogo online personalizável)
+├── TestimonialsSection.tsx     (depoimentos placeholder)
+├── PricingSection.tsx          (3 planos: Bronze, Prata, Ouro)
+├── FAQSection.tsx              (6 perguntas em accordion)
+├── FinalCTASection.tsx         (CTA emocional final)
+└── LandingFooter.tsx           (rodapé com logo e links)
+```
 
-## Fase 2: Criar Empresa Shine Pratas ✅
+## Design e Estilo
 
-### 2.1 Empresa inserida na tabela `companies`
-- ID: 6a7b01ac-8c16-48cf-9cbf-c5105c91c45d
-- Nome: Shine Pratas
-- Slug: shine-pratas
-- Logo: https://mbbxaejkwayrkstyrudr.supabase.co/storage/v1/object/public/product-images/logo-1765802430003.jpeg
-- Cores: #ec6093 / #f39bbb
-- WhatsApp: 5534998648832
-- Status: Ativo
+- **Paleta**: fundo `#0a0e1a` (navy profundo), cards `#111827`, acentos em `#7c3aed` (roxo) e `#3b82f6` (azul elétrico), texto branco/cinza claro
+- **Tipografia**: Inter (já carregada no projeto)
+- **Animações**: scroll reveal com Intersection Observer (sem dependências externas)
+- **Ícones**: Lucide React (já disponível no projeto — substitui Font Awesome)
+- **Responsivo**: mobile-first com breakpoints Tailwind
+- **Seções IA**: fundo gradiente diferenciado para hierarquia visual
 
-### 2.2 Usuário Shine vinculado como admin da empresa ✅
-- company_id: 6a7b01ac-8c16-48cf-9cbf-c5105c91c45d
-- user_id: e8a8d5a2-e8f5-4145-b854-86cd425c3f55 (shine925pratas@gmail.com)
-- role: admin
+## Alterações no Roteamento
 
----
+- Adicionar rota `/landing` apontando para `Landing.tsx`
+- A rota `/` continuará protegida para o Dashboard (sem alterar fluxo admin)
+- Opcionalmente, redirecionar visitantes não-autenticados de `/` para `/landing`
 
-## Fase 3: Migrar Dados Existentes ✅
+## Seções Detalhadas
 
-### 3.1 Dados migrados para Shine Pratas
-- 16 produtos
-- 13 categorias
-- Banners, vendas, clientes, cupons
-- Atributos e variantes de produtos
+1. **Hero**: gradiente de fundo, headline bold, botão CTA grande com hover animado, badge de prova social, placeholder de mockup do sistema
+2. **Problema & Solução**: grid 2 colunas — dores à esquerda (ícones vermelhos), soluções à direita (ícones verdes)
+3. **Experimentador Virtual**: fundo gradiente especial, badge "Exclusivo", fluxo em 3 passos ilustrado, benefícios em cards
+4. **Importador por Foto**: layout com imagem + texto, destaque do fluxo automatizado
+5. **Insights IA**: cards com exemplos visuais de insights gerados
+6. **Features**: grid 3x3 de cards com ícone, título e frase de benefício
+7. **Catálogo Online**: mockup + benefícios para WhatsApp/Instagram
+8. **Prova Social**: 3 depoimentos com avatar, nome, loja, cidade, estrelas
+9. **Preços**: 3 cards, Prata destacado com badge "Mais popular", lista de features com checks
+10. **FAQ**: Accordion com 6 perguntas
+11. **CTA Final**: fundo gradiente, headline emocional, botão grande
+12. **Rodapé**: logo, links, copyright
 
----
+## Observações
 
-## Fase 4: Atualizar Código ✅
+- Todos os CTAs direcionarão para uma âncora de preços ou link de contato/WhatsApp (a definir)
+- Mockups do sistema serão placeholders estilizados (divs com layout que simulam telas do sistema)
+- Nenhuma dependência externa adicional — usa apenas o que já existe no projeto (Tailwind, Lucide, Radix)
 
-### 4.1 Catálogo público com slug ✅
-- Rota `/catalogo/:slug` implementada
-- Rota `/catalogo/:slug/produto/:id` implementada
-- Dados filtrados por empresa
-
-### 4.2 ProductDetail atualizado ✅
-- Contexto de empresa via slug
-- Links corrigidos para usar slug
-
----
-
-## Estrutura Final de Acesso
-
-| Usuário | Email | Papel | Acesso |
-|---------|-------|-------|--------|
-| Felipe Gomes | felipecgomes01@hotmail.com | Super Admin | /master + todas empresas |
-| Shine | shine925pratas@gmail.com | Admin Empresa | /admin (apenas Shine) |
-
----
-
-## URLs Importantes
-
-- **Catálogo Shine**: `/catalogo/shine-pratas`
-- **Painel Master**: `/master`
-- **Painel Admin Shine**: `/` (login com shine925pratas@gmail.com)

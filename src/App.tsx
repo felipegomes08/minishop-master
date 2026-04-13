@@ -21,6 +21,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
+import Landing from "./pages/Landing";
 import MasterDashboard from "./pages/master/MasterDashboard";
 import MasterCompanies from "./pages/master/MasterCompanies";
 import MasterUsers from "./pages/master/MasterUsers";
@@ -83,6 +84,9 @@ function MasterProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Landing Page */}
+      <Route path="/landing" element={<Landing />} />
+      
       {/* Rotas Públicas - Catálogo */}
       <Route path="/catalogo/:slug" element={<Catalog />} />
       <Route path="/catalogo/:slug/produto/:id" element={<ProductDetail />} />

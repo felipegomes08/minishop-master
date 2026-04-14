@@ -12,8 +12,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  Shield
 } from 'lucide-react';
+import lojixIcon from '@/assets/lojix_icon.svg';
 
 interface MasterAdminLayoutProps {
   children: ReactNode;
@@ -55,9 +55,7 @@ export default function MasterAdminLayout({ children }: MasterAdminLayoutProps) 
         <div className="flex items-center justify-between p-4 border-b border-slate-700">
           {sidebarOpen && (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-slate-900" />
-              </div>
+              <img src={lojixIcon} alt="Lojix" className="w-10 h-10 rounded-xl" />
               <span className="font-semibold text-white">Master Admin</span>
             </div>
           )}
@@ -123,9 +121,7 @@ export default function MasterAdminLayout({ children }: MasterAdminLayoutProps) 
       >
         <div className="flex items-center justify-between p-4 border-b border-slate-700">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center">
-              <Shield className="w-5 h-5 text-slate-900" />
-            </div>
+            <img src={lojixIcon} alt="Lojix" className="w-10 h-10 rounded-xl" />
             <span className="font-semibold text-white">Master Admin</span>
           </div>
           <Button
@@ -182,9 +178,7 @@ export default function MasterAdminLayout({ children }: MasterAdminLayoutProps) 
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-slate-900" />
-            </div>
+            <img src={lojixIcon} alt="Lojix" className="w-8 h-8 rounded-lg" />
             <span className="font-semibold">Master Admin</span>
           </div>
           <div className="w-10" />

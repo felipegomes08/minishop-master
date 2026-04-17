@@ -1,70 +1,92 @@
 
 
-# Landing Page "Lojix" — Plano de Implementação
+# Integração Stripe (BYOK) + Sistema de Assinaturas Lojix
 
 ## Resumo
-
-Criar uma landing page completa e persuasiva em `/landing` como nova rota pública no app React existente. A página terá 12 seções conforme especificado, com tema escuro (navy profundo), acentos em roxo/azul elétrico, animações de scroll e design mobile-first.
+Integrar Stripe usando sua conta própria para vender os 3 planos (Bronze R$97, Prata R$167, Ouro R$249) como assinaturas mensais recorrentes, com gating automático de funcionalidades por plano.
 
 ## Arquitetura
 
-- **Nova rota**: `/landing` (pública, sem autenticação)
-- **Página principal**: `src/pages/Landing.tsx` — orquestra todas as seções
-- **Componentes**: `src/components/landing/` — uma pasta dedicada com um componente por seção
-- **Rota raiz**: Redirecionar `/` para `/landing` (ao invés do dashboard protegido, que passará para `/dashboard`)
-
-## Estrutura de Componentes
-
 ```text
-src/components/landing/
-├── LandingHeader.tsx      (navbar fixa com logo + links âncora + CTA)
-├── HeroSection.tsx        (headline, subheadline, CTA, mockup, prova social)
-├── ProblemSolutionSection.tsx  (dores do lojista → solução Lojix)
-├── VirtualTryOnSection.tsx     (destaque IA, badge exclusivo, fluxo ilustrado)
-├── PhotoImporterSection.tsx    (importador por foto com IA)
-├── AIInsightsSection.tsx       (insights automáticos)
-├── FeaturesGrid.tsx            (grade de 9 cards com ícones)
-├── CatalogSection.tsx          (catálogo online personalizável)
-├── TestimonialsSection.tsx     (depoimentos placeholder)
-├── PricingSection.tsx          (3 planos: Bronze, Prata, Ouro)
-├── FAQSection.tsx              (6 perguntas em accordion)
-├── FinalCTASection.tsx         (CTA emocional final)
-└── LandingFooter.tsx           (rodapé com logo e links)
+Landing /landing → Botão "Começar agora"
+   ↓
+Usuário cria conta (signup) ou faz login
+   ↓
+Edge Function `create-checkout` → cria Stripe Checkout Session
+   ↓
+Stripe Checkout (hospedado pelo Stripe, BRL, cartão + Pix)
+   ↓
+Webhook `stripe-webhook` recebe eventos
+   ↓
+Tabela `subscriptions` atualizada (company_id, plan_tier, status)
+   ↓
+Hook `useSubscription` lê plano ativo → libera/bloqueia features
 ```
 
-## Design e Estilo
+## Etapas (vou te guiar uma por vez)
 
-- **Paleta**: fundo `#0a0e1a` (navy profundo), cards `#111827`, acentos em `#7c3aed` (roxo) e `#3b82f6` (azul elétrico), texto branco/cinza claro
-- **Tipografia**: Inter (já carregada no projeto)
-- **Animações**: scroll reveal com Intersection Observer (sem dependências externas)
-- **Ícones**: Lucide React (já disponível no projeto — substitui Font Awesome)
-- **Responsivo**: mobile-first com breakpoints Tailwind
-- **Seções IA**: fundo gradiente diferenciado para hierarquia visual
+### Etapa 1 — Habilitar integração Stripe BYOK
+- Lovable abre um painel pedindo sua **Stripe Secret Key** (`sk_test_...` para começar em modo teste)
+- Você cola a chave, fica armazenada como secret seguro
 
-## Alterações no Roteamento
+### Etapa 2 — Criar produtos e preços no seu dashboard Stripe
+Você criará manualmente no Stripe (te passo o passo a passo exato):
+- 3 produtos: Lojix Bronze, Lojix Prata, Lojix Ouro
+- 3 preços recorrentes mensais em BRL (R$ 97, R$ 167, R$ 249)
+- Copia os 3 `price_id` (formato `price_xxx`) e me envia
 
-- Adicionar rota `/landing` apontando para `Landing.tsx`
-- A rota `/` continuará protegida para o Dashboard (sem alterar fluxo admin)
-- Opcionalmente, redirecionar visitantes não-autenticados de `/` para `/landing`
+### Etapa 3 — Criar tabela `subscriptions` no banco
+```text
+subscriptions
+- id, company_id (FK), user_id
+- stripe_customer_id, stripe_subscription_id
+- plan_tier (bronze | prata | ouro)
+- status (active | past_due | canceled | trialing)
+- current_period_end
+- RLS: usuário só vê assinatura da própria company
+```
 
-## Seções Detalhadas
+### Etapa 4 — Edge Function `create-checkout`
+- Recebe `plan_tier` do frontend
+- Cria/recupera Stripe Customer vinculado ao user
+- Cria Checkout Session com o `price_id` correto
+- Retorna URL do checkout → frontend redireciona
 
-1. **Hero**: gradiente de fundo, headline bold, botão CTA grande com hover animado, badge de prova social, placeholder de mockup do sistema
-2. **Problema & Solução**: grid 2 colunas — dores à esquerda (ícones vermelhos), soluções à direita (ícones verdes)
-3. **Experimentador Virtual**: fundo gradiente especial, badge "Exclusivo", fluxo em 3 passos ilustrado, benefícios em cards
-4. **Importador por Foto**: layout com imagem + texto, destaque do fluxo automatizado
-5. **Insights IA**: cards com exemplos visuais de insights gerados
-6. **Features**: grid 3x3 de cards com ícone, título e frase de benefício
-7. **Catálogo Online**: mockup + benefícios para WhatsApp/Instagram
-8. **Prova Social**: 3 depoimentos com avatar, nome, loja, cidade, estrelas
-9. **Preços**: 3 cards, Prata destacado com badge "Mais popular", lista de features com checks
-10. **FAQ**: Accordion com 6 perguntas
-11. **CTA Final**: fundo gradiente, headline emocional, botão grande
-12. **Rodapé**: logo, links, copyright
+### Etapa 5 — Edge Function `stripe-webhook`
+- Recebe eventos: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- Sincroniza tabela `subscriptions`
+- Configurada com `verify_jwt = false` (Stripe não envia JWT)
+- Você cadastra a URL do webhook no dashboard Stripe e cola o `webhook_secret`
 
-## Observações
+### Etapa 6 — Conectar landing aos botões de checkout
+- Botões "Começar agora" da `PricingSection.tsx` chamam `create-checkout`
+- Se não logado → redireciona para `/auth?redirect=checkout&plan=prata`
+- Após pagamento → redireciona para `/?welcome=true`
 
-- Todos os CTAs direcionarão para uma âncora de preços ou link de contato/WhatsApp (a definir)
-- Mockups do sistema serão placeholders estilizados (divs com layout que simulam telas do sistema)
-- Nenhuma dependência externa adicional — usa apenas o que já existe no projeto (Tailwind, Lucide, Radix)
+### Etapa 7 — Hook `useSubscription` + gating de features
+- Hook lê `subscriptions` da company atual
+- Define limites por plano:
+
+```text
+Bronze: 1 user, 50 produtos, 3 imgs/produto, sem CRM/cupons/IA
+Prata:  3 users, 100 produtos, 6 imgs, +CRM +cupons +importador IA +insights IA
+Ouro:   10 users, ilimitado, 10 imgs, +virtual try-on
+```
+
+- Bloqueios aplicados em: criação de produtos (limite), upload de imagens, acesso a `/coupons`, `/customers`, importador, insights, virtual try-on
+- Telas bloqueadas mostram upgrade prompt: "Disponível no plano Prata — Fazer upgrade"
+
+### Etapa 8 (depois) — Página `/billing` em Settings
+- Mostra plano atual, próxima cobrança, status
+- Botão "Gerenciar assinatura" abre Stripe Customer Portal (Stripe oferece pronto, só ativar)
+
+## Modo teste vs produção
+Começamos tudo em **modo teste** com `sk_test_...` — você testa pagamentos com o cartão `4242 4242 4242 4242` sem cobrar dinheiro real. Quando estiver tudo funcionando, troca para `sk_live_...` e price IDs de produção.
+
+## O que vou precisar de você ao longo do caminho
+1. Sua Stripe Secret Key de teste (etapa 1)
+2. Os 3 `price_id` após criar os produtos no Stripe (etapa 2)
+3. O `webhook_secret` após cadastrar a URL do webhook (etapa 5)
+
+Me confirma que pode seguir e eu já começo pela **Etapa 1** (habilitar a integração Stripe BYOK).
 

@@ -1,5 +1,10 @@
-import { Check, X, Crown } from "lucide-react";
+import { Check, X, Crown, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useScrollReveal } from "./useScrollReveal";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Feature {
   text: string;
@@ -8,6 +13,7 @@ interface Feature {
 
 interface Plan {
   name: string;
+  tier: "bronze" | "prata" | "ouro";
   price: string;
   popular?: boolean;
   features: Feature[];

@@ -1,9 +1,6 @@
 import { Check, X, Crown, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useScrollReveal } from "./useScrollReveal";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Feature {
@@ -77,24 +74,30 @@ const plans: Plan[] = [
 
 export default function PricingSection() {
   const { ref, isVisible } = useScrollReveal();
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
 
   const handleSubscribe = async (tier: "bronze" | "prata" | "ouro") => {
-    if (!user) {
-      sessionStorage.setItem("pending_plan_tier", tier);
-      navigate("/auth?redirect=checkout");
-      return;
-    }
     setLoadingTier(tier);
     try {
-      const { data, error } = await supabase.functions.invoke("create-checkout", {
-        body: { plan_tier: tier },
-      });
-      if (error) throw error;
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ plan_tier: tier }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao criar checkout");
+      }
+
       if (data?.url) {
-        window.open(data.url, "_blank");
+        window.location.href = data.url;
       } else {
         throw new Error("URL de checkout não retornada");
       }

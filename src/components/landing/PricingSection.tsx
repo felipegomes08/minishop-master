@@ -22,6 +22,7 @@ interface Plan {
 const plans: Plan[] = [
   {
     name: "Bronze",
+    tier: "bronze",
     price: "97",
     features: [
       { text: "1 usuário", included: true },

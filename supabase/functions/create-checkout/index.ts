@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,53 +26,41 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY não configurada");
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Usuário não autenticado");
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError) throw new Error(`Erro de autenticação: ${userError.message}`);
-    const user = userData.user;
-    if (!user?.email) throw new Error("Usuário sem e-mail");
-    log("Usuário autenticado", { userId: user.id, email: user.email });
-
-    const { plan_tier } = await req.json();
+    const { plan_tier, email } = await req.json();
     if (!plan_tier || !PRICE_IDS[plan_tier]) {
       throw new Error("plan_tier inválido. Use: bronze, prata ou ouro");
     }
     const priceId = PRICE_IDS[plan_tier];
-    log("Plano selecionado", { plan_tier, priceId });
+    log("Plano selecionado", { plan_tier, priceId, email });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Reutiliza customer existente, se houver
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    const customerId = customers.data[0]?.id;
-    log("Customer Stripe", { customerId: customerId ?? "novo" });
+    let customerId: string | undefined;
+    if (email) {
+      const customers = await stripe.customers.list({ email, limit: 1 });
+      customerId = customers.data[0]?.id;
+      log("Customer Stripe encontrado", { customerId, email });
+    }
 
     const origin = req.headers.get("origin") || "https://minishop-master.lovable.app";
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      customer_email: customerId ? undefined : user.email,
+      customer_email: customerId ? undefined : email,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
       allow_promotion_codes: true,
       success_url: `${origin}/?checkout=success&plan=${plan_tier}`,
       cancel_url: `${origin}/landing#precos`,
       metadata: {
-        user_id: user.id,
         plan_tier,
+        ...(email && { email }),
       },
       subscription_data: {
         metadata: {
-          user_id: user.id,
           plan_tier,
+          ...(email && { email }),
         },
       },
     });

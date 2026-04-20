@@ -1,5 +1,10 @@
-import { Check, X, Crown } from "lucide-react";
+import { Check, X, Crown, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useScrollReveal } from "./useScrollReveal";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Feature {
   text: string;
@@ -8,6 +13,7 @@ interface Feature {
 
 interface Plan {
   name: string;
+  tier: "bronze" | "prata" | "ouro";
   price: string;
   popular?: boolean;
   features: Feature[];
@@ -16,6 +22,7 @@ interface Plan {
 const plans: Plan[] = [
   {
     name: "Bronze",
+    tier: "bronze",
     price: "97",
     features: [
       { text: "1 usuário", included: true },
@@ -34,6 +41,7 @@ const plans: Plan[] = [
   },
   {
     name: "Prata",
+    tier: "prata",
     price: "167",
     popular: true,
     features: [
@@ -53,6 +61,7 @@ const plans: Plan[] = [
   },
   {
     name: "Ouro",
+    tier: "ouro",
     price: "249",
     features: [
       { text: "10 usuários", included: true },
@@ -68,6 +77,34 @@ const plans: Plan[] = [
 
 export default function PricingSection() {
   const { ref, isVisible } = useScrollReveal();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loadingTier, setLoadingTier] = useState<string | null>(null);
+
+  const handleSubscribe = async (tier: "bronze" | "prata" | "ouro") => {
+    if (!user) {
+      sessionStorage.setItem("pending_plan_tier", tier);
+      navigate("/auth?redirect=checkout");
+      return;
+    }
+    setLoadingTier(tier);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { plan_tier: tier },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      } else {
+        throw new Error("URL de checkout não retornada");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao iniciar checkout";
+      toast.error(msg);
+    } finally {
+      setLoadingTier(null);
+    }
+  };
 
   return (
     <section id="precos" className="py-20 lg:py-28 bg-[#0a0e1a]">
@@ -107,16 +144,24 @@ export default function PricingSection() {
                 <span className="text-sm text-gray-400">/mês</span>
               </div>
 
-              <a
-                href="#"
-                className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors mb-8 ${
+              <button
+                type="button"
+                onClick={() => handleSubscribe(plan.tier)}
+                disabled={loadingTier === plan.tier}
+                className={`flex items-center justify-center gap-2 w-full text-center py-3 rounded-xl font-semibold transition-colors mb-8 disabled:opacity-60 disabled:cursor-not-allowed ${
                   plan.popular
                     ? "bg-violet-600 hover:bg-violet-500 text-white"
                     : "bg-white/10 hover:bg-white/15 text-white"
                 }`}
               >
-                Começar agora
-              </a>
+                {loadingTier === plan.tier ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Redirecionando...
+                  </>
+                ) : (
+                  "Começar agora"
+                )}
+              </button>
 
               <ul className="space-y-3">
                 {plan.features.map((f, i) => (

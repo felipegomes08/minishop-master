@@ -77,6 +77,34 @@ const plans: Plan[] = [
 
 export default function PricingSection() {
   const { ref, isVisible } = useScrollReveal();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loadingTier, setLoadingTier] = useState<string | null>(null);
+
+  const handleSubscribe = async (tier: "bronze" | "prata" | "ouro") => {
+    if (!user) {
+      sessionStorage.setItem("pending_plan_tier", tier);
+      navigate("/auth?redirect=checkout");
+      return;
+    }
+    setLoadingTier(tier);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { plan_tier: tier },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      } else {
+        throw new Error("URL de checkout não retornada");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro ao iniciar checkout";
+      toast.error(msg);
+    } finally {
+      setLoadingTier(null);
+    }
+  };
 
   return (
     <section id="precos" className="py-20 lg:py-28 bg-[#0a0e1a]">

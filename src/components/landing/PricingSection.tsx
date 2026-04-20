@@ -116,16 +116,24 @@ export default function PricingSection() {
                 <span className="text-sm text-gray-400">/mês</span>
               </div>
 
-              <a
-                href="#"
-                className={`block w-full text-center py-3 rounded-xl font-semibold transition-colors mb-8 ${
+              <button
+                type="button"
+                onClick={() => handleSubscribe(plan.tier)}
+                disabled={loadingTier === plan.tier}
+                className={`flex items-center justify-center gap-2 w-full text-center py-3 rounded-xl font-semibold transition-colors mb-8 disabled:opacity-60 disabled:cursor-not-allowed ${
                   plan.popular
                     ? "bg-violet-600 hover:bg-violet-500 text-white"
                     : "bg-white/10 hover:bg-white/15 text-white"
                 }`}
               >
-                Começar agora
-              </a>
+                {loadingTier === plan.tier ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Redirecionando...
+                  </>
+                ) : (
+                  "Começar agora"
+                )}
+              </button>
 
               <ul className="space-y-3">
                 {plan.features.map((f, i) => (

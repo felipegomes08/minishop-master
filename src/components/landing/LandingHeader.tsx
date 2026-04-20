@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogIn } from "lucide-react";
 import lojixLogo from "@/assets/lojix_logo.svg";
 
 const navLinks = [
@@ -43,6 +43,13 @@ export default function LandingHeader() {
             </a>
           ))}
           <a
+            href="/auth"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/20 text-white text-sm font-medium hover:bg-white/10 transition-colors"
+          >
+            <LogIn size={16} />
+            Entrar
+          </a>
+          <a
             href="#precos"
             className="px-5 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors"
           >
@@ -70,6 +77,14 @@ export default function LandingHeader() {
               {l.label}
             </a>
           ))}
+          <a
+            href="/auth"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center justify-center gap-2 mt-2 py-3 text-gray-300 hover:text-white text-sm border-t border-white/10"
+          >
+            <LogIn size={16} />
+            Entrar no sistema
+          </a>
           <a
             href="#precos"
             onClick={() => setMobileOpen(false)}

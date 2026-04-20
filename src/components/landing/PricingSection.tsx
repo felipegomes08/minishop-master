@@ -41,6 +41,7 @@ const plans: Plan[] = [
   },
   {
     name: "Prata",
+    tier: "prata",
     price: "167",
     popular: true,
     features: [
@@ -60,6 +61,7 @@ const plans: Plan[] = [
   },
   {
     name: "Ouro",
+    tier: "ouro",
     price: "249",
     features: [
       { text: "10 usuários", included: true },

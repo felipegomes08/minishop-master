@@ -412,16 +412,32 @@ export default function MasterCompanies() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="text-sm bg-muted px-2 py-1 rounded">{company.slug}</code>
+                      <div className="flex flex-col gap-1">
+                        <PlanBadge tier={company.plan_tier} />
+                        {company.plan_source && (
+                          <span className="text-[10px] text-muted-foreground uppercase">
+                            {company.plan_source === 'stripe' ? 'Stripe' : 'Manual'}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {company.plan_status ? (
+                        <span className="text-sm">{STATUS_LABELS[company.plan_status] || company.plan_status}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                      {company.subscription_end && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          até {new Date(company.subscription_end).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       {companyStats[company.id]?.products || 0}
                     </TableCell>
                     <TableCell className="text-center">
                       {companyStats[company.id]?.sales || 0}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {companyStats[company.id]?.customers || 0}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={company.is_active ? 'default' : 'secondary'}>

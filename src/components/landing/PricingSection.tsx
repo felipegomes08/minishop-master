@@ -21,6 +21,7 @@ const plans: Plan[] = [
     name: "Bronze",
     tier: "bronze",
     price: "97",
+    description: "Para começar",
     features: [
       { text: "1 usuário", included: true },
       { text: "Até 50 produtos cadastrados", included: true },
@@ -40,7 +41,7 @@ const plans: Plan[] = [
     name: "Prata",
     tier: "prata",
     price: "167",
-    popular: true,
+    description: "Para crescer",
     features: [
       { text: "3 usuários", included: true },
       { text: "Até 100 produtos cadastrados", included: true },
@@ -60,6 +61,8 @@ const plans: Plan[] = [
     name: "Ouro",
     tier: "ouro",
     price: "249",
+    description: "Experiência completa",
+    popular: true,
     features: [
       { text: "10 usuários", included: true },
       { text: "Produtos ilimitados", included: true },

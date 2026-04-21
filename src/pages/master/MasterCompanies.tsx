@@ -576,6 +576,48 @@ export default function MasterCompanies() {
               </div>
             </div>
 
+            {/* Plan management */}
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div className="space-y-2">
+                <Label htmlFor="plan_tier">Plano contratado</Label>
+                <Select
+                  value={formData.plan_tier}
+                  onValueChange={(v) => setFormData({ ...formData, plan_tier: v as any })}
+                >
+                  <SelectTrigger id="plan_tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem plano</SelectItem>
+                    <SelectItem value="bronze">Bronze</SelectItem>
+                    <SelectItem value="prata">Prata</SelectItem>
+                    <SelectItem value="ouro">Ouro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.plan_tier !== 'none' && (
+                <div className="space-y-2">
+                  <Label htmlFor="subscription_end">Vence em (opcional)</Label>
+                  <Input
+                    id="subscription_end"
+                    type="date"
+                    value={formData.subscription_end}
+                    onChange={(e) => setFormData({ ...formData, subscription_end: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {editingCompany?.plan_source === 'stripe' && (
+                <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-500/10 p-2 rounded">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Este plano é gerenciado pelo Stripe. Alterar aqui sobrescreve a sincronização automática.
+                  </span>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center justify-between">
               <Label htmlFor="is_active">Empresa Ativa</Label>
               <Switch

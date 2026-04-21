@@ -148,9 +148,13 @@ export type Database = {
           is_active: boolean | null
           logo_url: string | null
           name: string
+          plan_source: string | null
+          plan_status: string | null
+          plan_tier: string | null
           primary_color: string | null
           secondary_color: string | null
           slug: string
+          subscription_end: string | null
           updated_at: string
           whatsapp_number: string | null
         }
@@ -160,9 +164,13 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          plan_source?: string | null
+          plan_status?: string | null
+          plan_tier?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           slug: string
+          subscription_end?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -172,9 +180,13 @@ export type Database = {
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          plan_source?: string | null
+          plan_status?: string | null
+          plan_tier?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           slug?: string
+          subscription_end?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }

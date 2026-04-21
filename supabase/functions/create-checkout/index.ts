@@ -51,7 +51,7 @@ serve(async (req) => {
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
       allow_promotion_codes: true,
-      success_url: `${origin}/?checkout=success&plan=${plan_tier}`,
+      success_url: `${origin}/pos-pagamento?session_id={CHECKOUT_SESSION_ID}&plan=${plan_tier}`,
       cancel_url: `${origin}/landing#precos`,
       metadata: {
         plan_tier,

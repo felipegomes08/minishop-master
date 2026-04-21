@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
 import Landing from "./pages/Landing";
+import PostCheckout from "./pages/PostCheckout";
 import MasterDashboard from "./pages/master/MasterDashboard";
 import MasterCompanies from "./pages/master/MasterCompanies";
 import MasterUsers from "./pages/master/MasterUsers";
@@ -86,6 +87,7 @@ function AppRoutes() {
     <Routes>
       {/* Landing Page */}
       <Route path="/landing" element={<Landing />} />
+      <Route path="/pos-pagamento" element={<PostCheckout />} />
       
       {/* Rotas Públicas - Catálogo */}
       <Route path="/catalogo/:slug" element={<Catalog />} />

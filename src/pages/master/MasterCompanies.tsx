@@ -297,10 +297,15 @@ export default function MasterCompanies() {
     }
   }
 
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    company.slug.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCompanies = companies.filter((company) => {
+    const matchesSearch =
+      company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      company.slug.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPlan =
+      planFilter === 'all' ||
+      (planFilter === 'none' ? !company.plan_tier : company.plan_tier === planFilter);
+    return matchesSearch && matchesPlan;
+  });
 
   return (
     <div className="space-y-6">
@@ -317,15 +322,29 @@ export default function MasterCompanies() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar empresas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar empresas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={planFilter} onValueChange={setPlanFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filtrar por plano" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os planos</SelectItem>
+            <SelectItem value="ouro">Ouro</SelectItem>
+            <SelectItem value="prata">Prata</SelectItem>
+            <SelectItem value="bronze">Bronze</SelectItem>
+            <SelectItem value="none">Sem plano</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Companies Table */}

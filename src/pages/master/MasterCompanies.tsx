@@ -33,7 +33,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Search, Edit, Trash2, Building2, ExternalLink, Users } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Building2, ExternalLink, Users, Crown, Info } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type PlanTier = 'bronze' | 'prata' | 'ouro' | null;
 
 interface Company {
   id: string;
@@ -46,6 +55,10 @@ interface Company {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  plan_tier: PlanTier;
+  plan_status: string | null;
+  plan_source: 'stripe' | 'manual' | null;
+  subscription_end: string | null;
 }
 
 interface CompanyStats {
@@ -54,12 +67,45 @@ interface CompanyStats {
   customers: number;
 }
 
+const PLAN_LABELS: Record<string, string> = {
+  bronze: 'Bronze',
+  prata: 'Prata',
+  ouro: 'Ouro',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo',
+  trialing: 'Período de teste',
+  past_due: 'Vencido',
+  canceled: 'Cancelado',
+  manual: 'Manual',
+  incomplete: 'Incompleto',
+};
+
+function PlanBadge({ tier }: { tier: PlanTier }) {
+  if (!tier) {
+    return <Badge variant="destructive">Sem plano</Badge>;
+  }
+  const styles: Record<string, string> = {
+    bronze: 'bg-orange-700/20 text-orange-700 border-orange-700/30 hover:bg-orange-700/20',
+    prata: 'bg-slate-400/20 text-slate-600 border-slate-400/30 hover:bg-slate-400/20',
+    ouro: 'bg-amber-500/20 text-amber-700 border-amber-500/40 hover:bg-amber-500/20',
+  };
+  return (
+    <Badge variant="outline" className={styles[tier]}>
+      {tier === 'ouro' && <Crown className="h-3 w-3 mr-1" />}
+      {PLAN_LABELS[tier]}
+    </Badge>
+  );
+}
+
 export default function MasterCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyStats, setCompanyStats] = useState<Record<string, CompanyStats>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [planFilter, setPlanFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
@@ -70,9 +116,10 @@ export default function MasterCompanies() {
     whatsapp_number: '',
     primary_color: '#4F46E5',
     secondary_color: '#F59E0B',
-    is_active: true
+    is_active: true,
+    plan_tier: 'none' as 'none' | 'bronze' | 'prata' | 'ouro',
+    subscription_end: '',
   });
-
   useEffect(() => {
     fetchCompanies();
   }, []);
@@ -86,7 +133,7 @@ export default function MasterCompanies() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCompanies(data || []);
+      setCompanies((data || []) as unknown as Company[]);
 
       // Fetch stats for each company
       const stats: Record<string, CompanyStats> = {};
@@ -128,7 +175,9 @@ export default function MasterCompanies() {
       whatsapp_number: '',
       primary_color: '#4F46E5',
       secondary_color: '#F59E0B',
-      is_active: true
+      is_active: true,
+      plan_tier: 'none',
+      subscription_end: '',
     });
     setEditingCompany(null);
   }
@@ -141,7 +190,9 @@ export default function MasterCompanies() {
       whatsapp_number: company.whatsapp_number || '',
       primary_color: company.primary_color || '#4F46E5',
       secondary_color: company.secondary_color || '#F59E0B',
-      is_active: company.is_active
+      is_active: company.is_active,
+      plan_tier: (company.plan_tier as any) || 'none',
+      subscription_end: company.subscription_end ? company.subscription_end.split('T')[0] : '',
     });
     setDialogOpen(true);
   }
@@ -155,14 +206,28 @@ export default function MasterCompanies() {
 
     setSaving(true);
     try {
-      const companyData = {
+      const planTier = formData.plan_tier === 'none' ? null : formData.plan_tier;
+      const isStripeManaged = editingCompany?.plan_source === 'stripe';
+      const planChanged = editingCompany?.plan_tier !== planTier;
+
+      const companyData: any = {
         name: formData.name.trim(),
         slug: formData.slug.trim(),
         whatsapp_number: formData.whatsapp_number.trim() || null,
         primary_color: formData.primary_color,
         secondary_color: formData.secondary_color,
-        is_active: formData.is_active
+        is_active: formData.is_active,
       };
+
+      // Update plan fields when not Stripe-managed, or when admin explicitly changes the plan
+      if (!isStripeManaged || planChanged) {
+        companyData.plan_tier = planTier;
+        companyData.plan_source = planTier ? 'manual' : null;
+        companyData.plan_status = planTier ? 'manual' : null;
+        companyData.subscription_end = formData.subscription_end
+          ? new Date(formData.subscription_end).toISOString()
+          : null;
+      }
 
       if (editingCompany) {
         const { error } = await supabase
@@ -232,10 +297,15 @@ export default function MasterCompanies() {
     }
   }
 
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    company.slug.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCompanies = companies.filter((company) => {
+    const matchesSearch =
+      company.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      company.slug.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPlan =
+      planFilter === 'all' ||
+      (planFilter === 'none' ? !company.plan_tier : company.plan_tier === planFilter);
+    return matchesSearch && matchesPlan;
+  });
 
   return (
     <div className="space-y-6">
@@ -252,15 +322,29 @@ export default function MasterCompanies() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar empresas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar empresas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={planFilter} onValueChange={setPlanFilter}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Filtrar por plano" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os planos</SelectItem>
+            <SelectItem value="ouro">Ouro</SelectItem>
+            <SelectItem value="prata">Prata</SelectItem>
+            <SelectItem value="bronze">Bronze</SelectItem>
+            <SelectItem value="none">Sem plano</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Companies Table */}
@@ -292,10 +376,10 @@ export default function MasterCompanies() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Slug</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Status do plano</TableHead>
                   <TableHead className="text-center">Produtos</TableHead>
                   <TableHead className="text-center">Vendas</TableHead>
-                  <TableHead className="text-center">Clientes</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -328,16 +412,32 @@ export default function MasterCompanies() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="text-sm bg-muted px-2 py-1 rounded">{company.slug}</code>
+                      <div className="flex flex-col gap-1">
+                        <PlanBadge tier={company.plan_tier} />
+                        {company.plan_source && (
+                          <span className="text-[10px] text-muted-foreground uppercase">
+                            {company.plan_source === 'stripe' ? 'Stripe' : 'Manual'}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {company.plan_status ? (
+                        <span className="text-sm">{STATUS_LABELS[company.plan_status] || company.plan_status}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                      {company.subscription_end && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          até {new Date(company.subscription_end).toLocaleDateString('pt-BR')}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       {companyStats[company.id]?.products || 0}
                     </TableCell>
                     <TableCell className="text-center">
                       {companyStats[company.id]?.sales || 0}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {companyStats[company.id]?.customers || 0}
                     </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={company.is_active ? 'default' : 'secondary'}>
@@ -474,6 +574,48 @@ export default function MasterCompanies() {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Plan management */}
+            <div className="space-y-3 rounded-lg border border-border p-3">
+              <div className="space-y-2">
+                <Label htmlFor="plan_tier">Plano contratado</Label>
+                <Select
+                  value={formData.plan_tier}
+                  onValueChange={(v) => setFormData({ ...formData, plan_tier: v as any })}
+                >
+                  <SelectTrigger id="plan_tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem plano</SelectItem>
+                    <SelectItem value="bronze">Bronze</SelectItem>
+                    <SelectItem value="prata">Prata</SelectItem>
+                    <SelectItem value="ouro">Ouro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {formData.plan_tier !== 'none' && (
+                <div className="space-y-2">
+                  <Label htmlFor="subscription_end">Vence em (opcional)</Label>
+                  <Input
+                    id="subscription_end"
+                    type="date"
+                    value={formData.subscription_end}
+                    onChange={(e) => setFormData({ ...formData, subscription_end: e.target.value })}
+                  />
+                </div>
+              )}
+
+              {editingCompany?.plan_source === 'stripe' && (
+                <div className="flex items-start gap-2 text-xs text-amber-600 bg-amber-500/10 p-2 rounded">
+                  <Info className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Este plano é gerenciado pelo Stripe. Alterar aqui sobrescreve a sincronização automática.
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between">

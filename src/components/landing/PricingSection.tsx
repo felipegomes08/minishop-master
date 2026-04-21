@@ -12,6 +12,7 @@ interface Plan {
   name: string;
   tier: "bronze" | "prata" | "ouro";
   price: string;
+  description: string;
   popular?: boolean;
   features: Feature[];
 }
@@ -138,12 +139,13 @@ export default function PricingSection() {
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-violet-600 text-white text-xs font-semibold flex items-center gap-1">
-                  <Crown size={12} /> Mais popular
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-amber-500 text-white text-xs font-semibold flex items-center gap-1">
+                  <Crown size={12} /> Recomendado
                 </div>
               )}
 
               <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+              <p className="text-sm text-gray-400 mb-4">{plan.description}</p>
               <div className="flex items-baseline gap-1 mb-6">
                 <span className="text-sm text-gray-400">R$</span>
                 <span className="text-4xl font-bold text-white">{plan.price}</span>

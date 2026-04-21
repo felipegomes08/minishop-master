@@ -133,7 +133,7 @@ export default function MasterCompanies() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCompanies(data || []);
+      setCompanies((data || []) as unknown as Company[]);
 
       // Fetch stats for each company
       const stats: Record<string, CompanyStats> = {};

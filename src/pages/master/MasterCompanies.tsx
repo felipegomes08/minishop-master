@@ -33,7 +33,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Plus, Search, Edit, Trash2, Building2, ExternalLink, Users } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Building2, ExternalLink, Users, Crown, Info } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+type PlanTier = 'bronze' | 'prata' | 'ouro' | null;
 
 interface Company {
   id: string;
@@ -46,6 +55,10 @@ interface Company {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  plan_tier: PlanTier;
+  plan_status: string | null;
+  plan_source: 'stripe' | 'manual' | null;
+  subscription_end: string | null;
 }
 
 interface CompanyStats {
@@ -54,12 +67,45 @@ interface CompanyStats {
   customers: number;
 }
 
+const PLAN_LABELS: Record<string, string> = {
+  bronze: 'Bronze',
+  prata: 'Prata',
+  ouro: 'Ouro',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  active: 'Ativo',
+  trialing: 'Período de teste',
+  past_due: 'Vencido',
+  canceled: 'Cancelado',
+  manual: 'Manual',
+  incomplete: 'Incompleto',
+};
+
+function PlanBadge({ tier }: { tier: PlanTier }) {
+  if (!tier) {
+    return <Badge variant="destructive">Sem plano</Badge>;
+  }
+  const styles: Record<string, string> = {
+    bronze: 'bg-orange-700/20 text-orange-700 border-orange-700/30 hover:bg-orange-700/20',
+    prata: 'bg-slate-400/20 text-slate-600 border-slate-400/30 hover:bg-slate-400/20',
+    ouro: 'bg-amber-500/20 text-amber-700 border-amber-500/40 hover:bg-amber-500/20',
+  };
+  return (
+    <Badge variant="outline" className={styles[tier]}>
+      {tier === 'ouro' && <Crown className="h-3 w-3 mr-1" />}
+      {PLAN_LABELS[tier]}
+    </Badge>
+  );
+}
+
 export default function MasterCompanies() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [companyStats, setCompanyStats] = useState<Record<string, CompanyStats>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [planFilter, setPlanFilter] = useState<string>('all');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<string | null>(null);
@@ -70,9 +116,10 @@ export default function MasterCompanies() {
     whatsapp_number: '',
     primary_color: '#4F46E5',
     secondary_color: '#F59E0B',
-    is_active: true
+    is_active: true,
+    plan_tier: 'none' as 'none' | 'bronze' | 'prata' | 'ouro',
+    subscription_end: '',
   });
-
   useEffect(() => {
     fetchCompanies();
   }, []);
@@ -128,7 +175,9 @@ export default function MasterCompanies() {
       whatsapp_number: '',
       primary_color: '#4F46E5',
       secondary_color: '#F59E0B',
-      is_active: true
+      is_active: true,
+      plan_tier: 'none',
+      subscription_end: '',
     });
     setEditingCompany(null);
   }
@@ -141,7 +190,9 @@ export default function MasterCompanies() {
       whatsapp_number: company.whatsapp_number || '',
       primary_color: company.primary_color || '#4F46E5',
       secondary_color: company.secondary_color || '#F59E0B',
-      is_active: company.is_active
+      is_active: company.is_active,
+      plan_tier: (company.plan_tier as any) || 'none',
+      subscription_end: company.subscription_end ? company.subscription_end.split('T')[0] : '',
     });
     setDialogOpen(true);
   }
@@ -155,14 +206,28 @@ export default function MasterCompanies() {
 
     setSaving(true);
     try {
-      const companyData = {
+      const planTier = formData.plan_tier === 'none' ? null : formData.plan_tier;
+      const isStripeManaged = editingCompany?.plan_source === 'stripe';
+      const planChanged = editingCompany?.plan_tier !== planTier;
+
+      const companyData: any = {
         name: formData.name.trim(),
         slug: formData.slug.trim(),
         whatsapp_number: formData.whatsapp_number.trim() || null,
         primary_color: formData.primary_color,
         secondary_color: formData.secondary_color,
-        is_active: formData.is_active
+        is_active: formData.is_active,
       };
+
+      // Update plan fields when not Stripe-managed, or when admin explicitly changes the plan
+      if (!isStripeManaged || planChanged) {
+        companyData.plan_tier = planTier;
+        companyData.plan_source = planTier ? 'manual' : null;
+        companyData.plan_status = planTier ? 'manual' : null;
+        companyData.subscription_end = formData.subscription_end
+          ? new Date(formData.subscription_end).toISOString()
+          : null;
+      }
 
       if (editingCompany) {
         const { error } = await supabase

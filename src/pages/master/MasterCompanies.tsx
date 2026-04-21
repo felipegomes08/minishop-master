@@ -357,10 +357,10 @@ export default function MasterCompanies() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>Slug</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Status do plano</TableHead>
                   <TableHead className="text-center">Produtos</TableHead>
                   <TableHead className="text-center">Vendas</TableHead>
-                  <TableHead className="text-center">Clientes</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>

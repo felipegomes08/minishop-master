@@ -83,12 +83,15 @@ export default function PricingSection() {
   const handleSubscribe = async (tier: "bronze" | "prata" | "ouro") => {
     setLoadingTier(tier);
     try {
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            apikey: anonKey,
+            Authorization: `Bearer ${anonKey}`,
           },
           body: JSON.stringify({ plan_tier: tier }),
         }
@@ -134,13 +137,13 @@ export default function PricingSection() {
               key={plan.name}
               className={`relative rounded-2xl p-6 lg:p-8 border transition-all ${
                 plan.popular
-                  ? "bg-violet-600/10 border-violet-500/40 scale-[1.02] shadow-lg shadow-violet-500/10"
+                  ? "bg-amber-500/10 border-amber-400/50 scale-[1.02] shadow-lg shadow-amber-500/10"
                   : "bg-white/5 border-white/10"
               }`}
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-amber-500 text-white text-xs font-semibold flex items-center gap-1">
-                  <Crown size={12} /> Recomendado
+                  <Crown size={12} /> Melhor escolha
                 </div>
               )}
 
@@ -158,7 +161,7 @@ export default function PricingSection() {
                 disabled={loadingTier === plan.tier}
                 className={`flex items-center justify-center gap-2 w-full text-center py-3 rounded-xl font-semibold transition-colors mb-8 disabled:opacity-60 disabled:cursor-not-allowed ${
                   plan.popular
-                    ? "bg-violet-600 hover:bg-violet-500 text-white"
+                    ? "bg-amber-500 hover:bg-amber-400 text-white"
                     : "bg-white/10 hover:bg-white/15 text-white"
                 }`}
               >

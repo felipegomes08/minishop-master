@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.reset-password]
 verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.provision-company-from-checkout]
+verify_jwt = false

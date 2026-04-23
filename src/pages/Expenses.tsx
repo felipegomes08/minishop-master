@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarIcon, Eye, FileImage, Loader2, Pencil, Plus, Search, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Camera, CalendarIcon, Eye, FileImage, Loader2, Pencil, Plus, Search, Trash2, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanyContext } from "@/hooks/useCompanyContext";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -50,6 +50,7 @@ type ExpenseForm = {
   amount: string;
   expenseDate: Date;
   paymentMethod: string;
+  receiptImageUrl: string | null;
 };
 
 const categories = ["Compra de produtos", "Aluguel", "Marketing", "Taxas", "Transporte", "Embalagens", "Serviços", "Alimentação", "Outros"];
@@ -62,11 +63,21 @@ const emptyForm = (): ExpenseForm => ({
   amount: "",
   expenseDate: new Date(),
   paymentMethod: "Outros",
+  receiptImageUrl: null,
 });
 
 const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
 const formatDate = (value: string) => format(new Date(`${value}T12:00:00`), "dd/MM/yyyy", { locale: ptBR });
 const dateToInput = (date: Date) => format(date, "yyyy-MM-dd");
+
+function dataUrlToBlob(dataUrl: string) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] || "image/jpeg";
+  const bytes = atob(base64);
+  const array = new Uint8Array(bytes.length);
+  for (let index = 0; index < bytes.length; index += 1) array[index] = bytes.charCodeAt(index);
+  return new Blob([array], { type: mime });
+}
 
 async function compressImage(file: File): Promise<string> {
   const imageUrl = URL.createObjectURL(file);
@@ -95,7 +106,6 @@ export default function Expenses() {
   const { companyId, loading: companyLoading } = useCompanyContext();
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [salesTotal, setSalesTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -106,6 +116,8 @@ export default function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [form, setForm] = useState<ExpenseForm>(emptyForm);
+  const [saveReceipt, setSaveReceipt] = useState(false);
+  const [receiptImageBase64, setReceiptImageBase64] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [readingReceipt, setReadingReceipt] = useState(false);
 
@@ -122,26 +134,18 @@ export default function Expenses() {
         .eq("company_id", companyId)
         .order("expense_date", { ascending: false });
 
-      let salesQuery = supabase.from("sales").select("total, created_at").eq("company_id", companyId);
-
       if (startDate) {
         expensesQuery = expensesQuery.gte("expense_date", dateToInput(startDate));
-        salesQuery = salesQuery.gte("created_at", startDate.toISOString());
       }
       if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
         expensesQuery = expensesQuery.lte("expense_date", dateToInput(endDate));
-        salesQuery = salesQuery.lte("created_at", end.toISOString());
       }
 
-      const [{ data: expensesData, error: expensesError }, { data: salesData, error: salesError }] = await Promise.all([expensesQuery, salesQuery]);
+      const { data: expensesData, error: expensesError } = await expensesQuery;
 
       if (expensesError) throw expensesError;
-      if (salesError) throw salesError;
 
       setExpenses((expensesData || []) as Expense[]);
-      setSalesTotal((salesData || []).reduce((sum, sale) => sum + Number(sale.total || 0), 0));
     } catch (error) {
       console.error("Erro ao buscar despesas:", error);
       toast({ title: "Erro ao carregar despesas", description: "Tente novamente em alguns instantes.", variant: "destructive" });
@@ -162,12 +166,11 @@ export default function Expenses() {
     );
   }, [expenses, searchQuery]);
 
-  const expensesTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const balance = salesTotal - expensesTotal;
-
   const openCreateDialog = () => {
     setEditingExpense(null);
     setForm(emptyForm());
+    setSaveReceipt(false);
+    setReceiptImageBase64(null);
     setDialogOpen(true);
   };
 
@@ -180,7 +183,10 @@ export default function Expenses() {
       amount: String(Number(expense.amount || 0)),
       expenseDate: new Date(`${expense.expense_date}T12:00:00`),
       paymentMethod: expense.payment_method,
+      receiptImageUrl: expense.receipt_image_url,
     });
+    setSaveReceipt(Boolean(expense.receipt_image_url));
+    setReceiptImageBase64(null);
     setDialogOpen(true);
   };
 
@@ -194,6 +200,7 @@ export default function Expenses() {
     setReadingReceipt(true);
     try {
       const imageBase64 = await compressImage(file);
+      setReceiptImageBase64(imageBase64);
       const { data, error } = await supabase.functions.invoke("extract-expense-from-receipt", { body: { imageBase64 } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -226,23 +233,36 @@ export default function Expenses() {
     }
 
     setSaving(true);
-    const payload = {
-      company_id: companyId,
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      category: form.category,
-      amount,
-      expense_date: dateToInput(form.expenseDate),
-      payment_method: form.paymentMethod,
-    };
-
     try {
+      let receiptImageUrl = saveReceipt ? form.receiptImageUrl : null;
+
+      if (saveReceipt && receiptImageBase64) {
+        const filePath = `${companyId}/${crypto.randomUUID()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from("expense-receipts").upload(filePath, dataUrlToBlob(receiptImageBase64), {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+        if (uploadError) throw uploadError;
+        receiptImageUrl = filePath;
+      }
+
+      const payload = {
+        company_id: companyId,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        category: form.category,
+        amount,
+        expense_date: dateToInput(form.expenseDate),
+        payment_method: form.paymentMethod,
+        receipt_image_url: receiptImageUrl,
+      };
+
       const query = editingExpense
         ? db.from("expenses").update(payload).eq("id", editingExpense.id).eq("company_id", companyId)
         : db.from("expenses").insert(payload);
       const { error } = await query;
       if (error) throw error;
-      toast({ title: editingExpense ? "Despesa atualizada" : "Despesa cadastrada", description: "O balanço do período foi recalculado." });
+      toast({ title: editingExpense ? "Despesa atualizada" : "Despesa cadastrada", description: "As informações da despesa foram salvas." });
       setDialogOpen(false);
       await fetchData();
     } catch (error) {
@@ -258,7 +278,7 @@ export default function Expenses() {
     try {
       const { error } = await db.from("expenses").delete().eq("id", selectedExpense.id).eq("company_id", companyId);
       if (error) throw error;
-      toast({ title: "Despesa excluída", description: "O balanço foi atualizado." });
+      toast({ title: "Despesa excluída", description: "A despesa foi removida." });
       setDeleteOpen(false);
       setSelectedExpense(null);
       await fetchData();
@@ -273,17 +293,11 @@ export default function Expenses() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Despesas</h1>
-          <p className="text-sm text-muted-foreground">Controle os gastos e acompanhe o saldo entre entradas e saídas.</p>
+          <p className="text-sm text-muted-foreground">Controle os gastos da empresa e organize seus comprovantes.</p>
         </div>
         <Button onClick={openCreateDialog} className="gap-2">
           <Plus className="h-4 w-4" /> Nova Despesa
         </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <SummaryCard title="Entradas" value={formatCurrency(salesTotal)} icon={TrendingUp} tone="success" />
-        <SummaryCard title="Saídas" value={formatCurrency(expensesTotal)} icon={TrendingDown} tone="destructive" />
-        <SummaryCard title="Saldo" value={formatCurrency(balance)} icon={Wallet} tone={balance > 0 ? "success" : balance < 0 ? "destructive" : "muted"} />
       </div>
 
       <Card>
@@ -359,15 +373,30 @@ export default function Expenses() {
           <div className="grid gap-4 py-2">
             <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4">
               <Label htmlFor="receipt-upload" className="mb-2 block">Leitor de notinha</Label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">A imagem é usada somente para leitura e não é salva automaticamente.</p>
-                <Button type="button" variant="secondary" className="gap-2" disabled={readingReceipt} asChild>
-                  <label htmlFor="receipt-upload" className="cursor-pointer">
-                    {readingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
-                    {readingReceipt ? "Lendo..." : "Anexar foto"}
-                  </label>
-                </Button>
-                <Input id="receipt-upload" type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => handleReceiptUpload(event.target.files?.[0])} />
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">A imagem é usada para leitura. Ative a opção abaixo se quiser salvar o comprovante na despesa.</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button type="button" variant="secondary" className="gap-2" disabled={readingReceipt} asChild>
+                    <label htmlFor="receipt-camera" className="cursor-pointer">
+                      {readingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                      {readingReceipt ? "Lendo..." : "Tirar foto"}
+                    </label>
+                  </Button>
+                  <Button type="button" variant="outline" className="gap-2" disabled={readingReceipt} asChild>
+                    <label htmlFor="receipt-upload" className="cursor-pointer">
+                      {readingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
+                      Buscar da galeria
+                    </label>
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background p-3">
+                  <Label htmlFor="save-receipt" className="text-sm font-medium">Salvar comprovante nesta despesa</Label>
+                  <Switch id="save-receipt" checked={saveReceipt} onCheckedChange={setSaveReceipt} />
+                </div>
+                {saveReceipt && !receiptImageBase64 && !form.receiptImageUrl && <p className="text-xs text-muted-foreground">Anexe ou tire uma foto para salvar o comprovante.</p>}
+                {form.receiptImageUrl && !receiptImageBase64 && <p className="text-xs text-muted-foreground">Esta despesa já possui comprovante salvo.</p>}
+                <Input id="receipt-camera" type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => handleReceiptUpload(event.target.files?.[0])} />
+                <Input id="receipt-upload" type="file" accept="image/*" className="hidden" onChange={(event) => handleReceiptUpload(event.target.files?.[0])} />
               </div>
             </div>
 
@@ -441,20 +470,6 @@ export default function Expenses() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-function SummaryCard({ title, value, icon: Icon, tone }: { title: string; value: string; icon: typeof TrendingUp; tone: "success" | "destructive" | "muted" }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={cn("h-4 w-4", tone === "success" && "text-success", tone === "destructive" && "text-destructive", tone === "muted" && "text-muted-foreground")} />
-      </CardHeader>
-      <CardContent>
-        <div className={cn("text-2xl font-semibold", tone === "success" && "text-success", tone === "destructive" && "text-destructive")}>{value}</div>
-      </CardContent>
-    </Card>
   );
 }
 

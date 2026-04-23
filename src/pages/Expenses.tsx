@@ -278,7 +278,7 @@ export default function Expenses() {
     try {
       const { error } = await db.from("expenses").delete().eq("id", selectedExpense.id).eq("company_id", companyId);
       if (error) throw error;
-      toast({ title: "Despesa excluída", description: "O balanço foi atualizado." });
+      toast({ title: "Despesa excluída", description: "A despesa foi removida." });
       setDeleteOpen(false);
       setSelectedExpense(null);
       await fetchData();
@@ -293,17 +293,11 @@ export default function Expenses() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="page-title">Despesas</h1>
-          <p className="text-sm text-muted-foreground">Controle os gastos e acompanhe o saldo entre entradas e saídas.</p>
+          <p className="text-sm text-muted-foreground">Controle os gastos da empresa e organize seus comprovantes.</p>
         </div>
         <Button onClick={openCreateDialog} className="gap-2">
           <Plus className="h-4 w-4" /> Nova Despesa
         </Button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <SummaryCard title="Entradas" value={formatCurrency(salesTotal)} icon={TrendingUp} tone="success" />
-        <SummaryCard title="Saídas" value={formatCurrency(expensesTotal)} icon={TrendingDown} tone="destructive" />
-        <SummaryCard title="Saldo" value={formatCurrency(balance)} icon={Wallet} tone={balance > 0 ? "success" : balance < 0 ? "destructive" : "muted"} />
       </div>
 
       <Card>
@@ -379,15 +373,30 @@ export default function Expenses() {
           <div className="grid gap-4 py-2">
             <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4">
               <Label htmlFor="receipt-upload" className="mb-2 block">Leitor de notinha</Label>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">A imagem é usada somente para leitura e não é salva automaticamente.</p>
-                <Button type="button" variant="secondary" className="gap-2" disabled={readingReceipt} asChild>
-                  <label htmlFor="receipt-upload" className="cursor-pointer">
-                    {readingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
-                    {readingReceipt ? "Lendo..." : "Anexar foto"}
-                  </label>
-                </Button>
-                <Input id="receipt-upload" type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => handleReceiptUpload(event.target.files?.[0])} />
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">A imagem é usada para leitura. Ative a opção abaixo se quiser salvar o comprovante na despesa.</p>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button type="button" variant="secondary" className="gap-2" disabled={readingReceipt} asChild>
+                    <label htmlFor="receipt-camera" className="cursor-pointer">
+                      {readingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                      {readingReceipt ? "Lendo..." : "Tirar foto"}
+                    </label>
+                  </Button>
+                  <Button type="button" variant="outline" className="gap-2" disabled={readingReceipt} asChild>
+                    <label htmlFor="receipt-upload" className="cursor-pointer">
+                      {readingReceipt ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileImage className="h-4 w-4" />}
+                      Buscar da galeria
+                    </label>
+                  </Button>
+                </div>
+                <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background p-3">
+                  <Label htmlFor="save-receipt" className="text-sm font-medium">Salvar comprovante nesta despesa</Label>
+                  <Switch id="save-receipt" checked={saveReceipt} onCheckedChange={setSaveReceipt} />
+                </div>
+                {saveReceipt && !receiptImageBase64 && !form.receiptImageUrl && <p className="text-xs text-muted-foreground">Anexe ou tire uma foto para salvar o comprovante.</p>}
+                {form.receiptImageUrl && !receiptImageBase64 && <p className="text-xs text-muted-foreground">Esta despesa já possui comprovante salvo.</p>}
+                <Input id="receipt-camera" type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => handleReceiptUpload(event.target.files?.[0])} />
+                <Input id="receipt-upload" type="file" accept="image/*" className="hidden" onChange={(event) => handleReceiptUpload(event.target.files?.[0])} />
               </div>
             </div>
 

@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarIcon, Eye, FileImage, Loader2, Pencil, Plus, Search, Trash2, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Camera, CalendarIcon, Eye, FileImage, Loader2, Pencil, Plus, Search, Trash2, TrendingDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCompanyContext } from "@/hooks/useCompanyContext";
-import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -50,6 +50,7 @@ type ExpenseForm = {
   amount: string;
   expenseDate: Date;
   paymentMethod: string;
+  receiptImageUrl: string | null;
 };
 
 const categories = ["Compra de produtos", "Aluguel", "Marketing", "Taxas", "Transporte", "Embalagens", "Serviços", "Alimentação", "Outros"];
@@ -62,6 +63,7 @@ const emptyForm = (): ExpenseForm => ({
   amount: "",
   expenseDate: new Date(),
   paymentMethod: "Outros",
+  receiptImageUrl: null,
 });
 
 const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value || 0);
@@ -95,7 +97,6 @@ export default function Expenses() {
   const { companyId, loading: companyLoading } = useCompanyContext();
   const { toast } = useToast();
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [salesTotal, setSalesTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -106,6 +107,8 @@ export default function Expenses() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [form, setForm] = useState<ExpenseForm>(emptyForm);
+  const [saveReceipt, setSaveReceipt] = useState(false);
+  const [receiptImageBase64, setReceiptImageBase64] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [readingReceipt, setReadingReceipt] = useState(false);
 

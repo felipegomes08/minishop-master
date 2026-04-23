@@ -473,20 +473,6 @@ export default function Expenses() {
   );
 }
 
-function SummaryCard({ title, value, icon: Icon, tone }: { title: string; value: string; icon: typeof TrendingUp; tone: "success" | "destructive" | "muted" }) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Icon className={cn("h-4 w-4", tone === "success" && "text-success", tone === "destructive" && "text-destructive", tone === "muted" && "text-muted-foreground")} />
-      </CardHeader>
-      <CardContent>
-        <div className={cn("text-2xl font-semibold", tone === "success" && "text-success", tone === "destructive" && "text-destructive")}>{value}</div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function DatePicker({ label, date, onChange }: { label?: string; date?: Date; onChange: (date?: Date) => void }) {
   return (
     <Popover>

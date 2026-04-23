@@ -233,23 +233,36 @@ export default function Expenses() {
     }
 
     setSaving(true);
-    const payload = {
-      company_id: companyId,
-      title: form.title.trim(),
-      description: form.description.trim() || null,
-      category: form.category,
-      amount,
-      expense_date: dateToInput(form.expenseDate),
-      payment_method: form.paymentMethod,
-    };
-
     try {
+      let receiptImageUrl = saveReceipt ? form.receiptImageUrl : null;
+
+      if (saveReceipt && receiptImageBase64) {
+        const filePath = `${companyId}/${crypto.randomUUID()}.jpg`;
+        const { error: uploadError } = await supabase.storage.from("expense-receipts").upload(filePath, dataUrlToBlob(receiptImageBase64), {
+          contentType: "image/jpeg",
+          upsert: false,
+        });
+        if (uploadError) throw uploadError;
+        receiptImageUrl = filePath;
+      }
+
+      const payload = {
+        company_id: companyId,
+        title: form.title.trim(),
+        description: form.description.trim() || null,
+        category: form.category,
+        amount,
+        expense_date: dateToInput(form.expenseDate),
+        payment_method: form.paymentMethod,
+        receipt_image_url: receiptImageUrl,
+      };
+
       const query = editingExpense
         ? db.from("expenses").update(payload).eq("id", editingExpense.id).eq("company_id", companyId)
         : db.from("expenses").insert(payload);
       const { error } = await query;
       if (error) throw error;
-      toast({ title: editingExpense ? "Despesa atualizada" : "Despesa cadastrada", description: "O balanço do período foi recalculado." });
+      toast({ title: editingExpense ? "Despesa atualizada" : "Despesa cadastrada", description: "As informações da despesa foram salvas." });
       setDialogOpen(false);
       await fetchData();
     } catch (error) {

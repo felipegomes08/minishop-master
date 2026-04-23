@@ -18,6 +18,7 @@ import Sales from "./pages/Sales";
 import Coupons from "./pages/Coupons";
 import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
+import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
@@ -107,6 +108,7 @@ function AppRoutes() {
       <Route path="/attributes" element={<ProtectedRoute><Attributes /></ProtectedRoute>} />
       <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
       <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+      <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
       <Route path="/coupons" element={<ProtectedRoute><Coupons /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />

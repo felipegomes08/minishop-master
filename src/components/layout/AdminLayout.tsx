@@ -9,6 +9,7 @@ import {
   FolderTree,
   Users,
   ShoppingCart,
+  ReceiptText,
   Settings,
   LogOut,
   Menu,
@@ -30,6 +31,7 @@ const navItems = [
   { path: '/attributes', icon: Sliders, label: 'Atributos' },
   { path: '/customers', icon: Users, label: 'Clientes' },
   { path: '/sales', icon: ShoppingCart, label: 'Vendas' },
+  { path: '/expenses', icon: ReceiptText, label: 'Despesas' },
   { path: '/coupons', icon: Ticket, label: 'Cupons' },
   { path: '/settings', icon: Settings, label: 'Configurações' },
 ];

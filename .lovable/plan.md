@@ -1,114 +1,153 @@
 
+# Tela de Despesas com Leitor de Notinha
 
-# Vincular Empresas aos Planos Contratados
+## Objetivo
 
-## Como funciona hoje
-
-Hoje o fluxo de pagamento e o cadastro de empresa são **desconectados**:
+Criar uma nova tela administrativa **Despesas**, no mesmo padrão visual e funcional da tela de **Vendas**, para registrar gastos da empresa e permitir comparar:
 
 ```text
-Stripe Checkout (paga)          Master Admin (cria empresa)
-        ↓                                ↓
-  subscriptions                      companies
-  (company_id, plan_tier)            (sem plano)
-        ↓                                ↓
-   ❌ não conversam entre si
+Entradas: vendas
+Saídas: despesas
+Resultado: entradas - saídas
 ```
 
-Problemas:
-1. A tabela `companies` não tem coluna `plan_tier` — você não vê na listagem de empresas qual plano cada uma tem
-2. Quando alguém paga no Stripe sem ter empresa ainda, o `subscriptions.company_id` fica órfão
-3. Quando você cria empresa no Master Admin, não há como dizer "essa empresa é do plano Ouro"
-4. Sem gating: o sistema não bloqueia features baseado no plano
-
-## Estratégia proposta
-
-Tornar o **plano** uma propriedade visível da empresa, com duas fontes:
-- **Automática**: quando o Stripe confirma pagamento, sincroniza no `companies.plan_tier`
-- **Manual**: você (Super Admin) pode definir/sobrescrever o plano de qualquer empresa pelo Master Admin (útil para cortesias, testes, planos legados)
-
-## Mudanças
+## O que será implementado
 
 ### 1. Banco de dados
-Adicionar à tabela `companies`:
-- `plan_tier` (text: `bronze` | `prata` | `ouro` | `null`) — plano ativo
-- `plan_status` (text: `active` | `past_due` | `canceled` | `trialing` | `manual` | `null`) — `manual` = você atribuiu sem Stripe
-- `plan_source` (text: `stripe` | `manual` | `null`) — origem do plano
-- `subscription_end` (timestamptz) — fim do período pago
 
-Criar função `sync_company_plan_from_subscription()` que, quando uma linha em `subscriptions` muda, atualiza os campos correspondentes em `companies` (apenas se `plan_source != 'manual'`, para não sobrescrever atribuições manuais).
+Criar uma nova tabela `expenses` com isolamento por empresa:
 
-Trigger em `subscriptions` (AFTER INSERT OR UPDATE) que chama essa função.
+- `id`
+- `company_id`
+- `title` — nome/descrição curta da despesa
+- `description` — observações opcionais
+- `category` — categoria simples, ex: Aluguel, Compra de produtos, Marketing, Taxas, Outros
+- `amount` — valor da despesa
+- `expense_date` — data da despesa
+- `payment_method` — Pix, dinheiro, cartão, boleto, transferência, outros
+- `receipt_image_url` — opcional, caso seja decidido salvar a imagem da notinha
+- `created_at`
+- `updated_at`
 
-### 2. Master Admin — `MasterCompanies.tsx`
-Na listagem de empresas, adicionar:
-- **Coluna "Plano"** com badge colorido: Bronze (cinza), Prata (azul), Ouro (âmbar), Sem plano (vermelho)
-- **Coluna "Status"**: Ativo / Vencido / Cancelado / Manual
-- **Filtro** por plano no topo
+Regras de segurança:
+- Usuários administradores só acessam despesas da própria empresa.
+- Super Admin consegue gerenciar todas.
+- A tabela seguirá o mesmo padrão multiempresa já usado em vendas, produtos e clientes.
 
-No formulário de criar/editar empresa:
-- Campo `Select` "Plano contratado" com opções: Sem plano / Bronze / Prata / Ouro
-- Campo `Select` "Origem": Stripe (somente leitura, vem do webhook) / Manual (você define)
-- Campo `Date` "Vence em" (opcional, apenas para planos manuais)
-- Aviso visual quando o plano vem do Stripe: "Este plano é gerenciado pelo Stripe — alterações manuais aqui sobrescrevem a sincronização"
+### 2. Leitor de notinha com IA
 
-### 3. Vincular pagamento Stripe → empresa
-Como o checkout hoje aceita compradores sem login, precisamos resolver "quem é a empresa dessa assinatura?". Fluxo proposto:
+Criar uma função de backend `extract-expense-from-receipt`.
+
+Funcionamento:
 
 ```text
-1. Usuário compra no Stripe (qualquer e-mail)
-2. Stripe redireciona para /pos-pagamento?session_id=cs_xxx&plan=prata
-3. Página /pos-pagamento mostra:
-   - "Pagamento confirmado!"
-   - Formulário: nome da empresa + e-mail + senha
-   - Cria conta + empresa + vincula subscription via edge function
-4. Edge function `provision-company-from-checkout`:
-   - Verifica session_id no Stripe (confirma pagamento)
-   - Cria user no Supabase Auth
-   - Cria company (com plan_tier preenchido)
-   - Cria company_users (user → company, role admin)
-   - Cria user_roles (admin)
-   - Cria subscription (company_id + stripe_customer_id + plan_tier)
-5. Redireciona para /auth para login
+Usuário anexa/tira foto da notinha
+        ↓
+Imagem é enviada para a IA
+        ↓
+IA retorna valor, data, estabelecimento e sugestão de categoria
+        ↓
+Formulário de despesa é preenchido automaticamente
+        ↓
+Usuário revisa e salva
 ```
 
-### 4. Hook `useSubscription` (preparação para gating)
-Criar `src/hooks/useSubscription.ts` que lê `companies.plan_tier` da empresa do usuário logado. Ainda **sem aplicar bloqueios** — apenas expõe o plano para uso futuro:
+Campos extraídos pela IA:
+- valor total
+- data da compra, se estiver visível
+- nome do estabelecimento/fornecedor, se estiver visível
+- categoria sugerida
+- descrição curta
 
-```typescript
-const { planTier, isActive, hasFeature } = useSubscription();
-// hasFeature('virtual_try_on') → só true se planTier === 'ouro'
-// hasFeature('crm') → true se planTier === 'prata' | 'ouro'
+A foto será usada para leitura da notinha. A implementação pode manter a imagem apenas em memória durante a extração, evitando salvar automaticamente arquivos sensíveis. Se quiser guardar comprovantes para consulta posterior, será possível salvar também o `receipt_image_url`.
+
+### 3. Nova página `Despesas`
+
+Criar `src/pages/Expenses.tsx`, seguindo o formato da tela de Vendas:
+
+Funcionalidades:
+- Listagem de despesas
+- Filtro por busca
+- Filtro por período
+- Cards de resumo:
+  - Total de despesas no período
+  - Total de vendas no período
+  - Saldo do período
+- Botão **Nova Despesa**
+- Criar despesa manualmente
+- Usar leitor de notinha para preencher os dados
+- Editar despesa
+- Ver detalhes
+- Excluir despesa com confirmação
+- Loading states e empty states no padrão atual
+
+Campos do formulário:
+- Título
+- Valor
+- Data
+- Categoria
+- Forma de pagamento
+- Observações
+- Anexar/ler notinha com IA
+
+### 4. Navegação
+
+Adicionar a nova tela ao menu lateral:
+
+```text
+Painel
+Produtos
+Categorias
+Atributos
+Clientes
+Vendas
+Despesas
+Cupons
+Configurações
 ```
 
-## Arquivos afetados
+Também adicionar a rota protegida:
 
-**Migração SQL** (nova):
-- Adiciona colunas em `companies`
-- Cria função e trigger de sincronização
+```text
+/expenses
+```
 
-**Edge function nova**:
-- `supabase/functions/provision-company-from-checkout/index.ts`
+A tela será acessível apenas para usuários administradores da empresa, igual à tela de Vendas.
 
-**Páginas/componentes**:
-- `src/pages/master/MasterCompanies.tsx` — coluna plano, filtro, campos no formulário
-- `src/pages/PostCheckout.tsx` (nova) — formulário pós-pagamento
-- `src/App.tsx` — rota `/pos-pagamento`
-- `supabase/functions/create-checkout/index.ts` — atualizar `success_url` para `/pos-pagamento?session_id={CHECKOUT_SESSION_ID}&plan=...`
-- `src/hooks/useSubscription.ts` (novo)
+### 5. Balanço entre entradas e saídas
 
-## O que **não** será feito agora (próximos passos)
-- Aplicar gating nas features (Virtual Try-On, CRM, cupons, IA) — fica para um próximo passo
-- Tela "Minha Assinatura" em Settings — próximo passo
-- Webhook do Stripe — você optou por não usar agora; a sincronização acontece via `check-subscription` (chamada no login) e via `provision-company-from-checkout` (no pós-pagamento)
+Na própria tela de Despesas, o usuário verá o resumo financeiro do período:
 
-## Decisão necessária antes de implementar
+```text
+Entradas        R$ 10.000,00
+Saídas          R$  3.200,00
+Saldo           R$  6.800,00
+```
 
-Para a **Etapa 3 (vinculação Stripe → empresa)**, qual fluxo prefere?
+O saldo ficará visualmente:
+- verde quando positivo
+- vermelho quando negativo
+- neutro quando zerado
 
-**Opção A (recomendada)**: Página `/pos-pagamento` que coleta dados da empresa após o pagamento confirmado pelo Stripe. Mais simples, sem login prévio, conversão maior na landing.
+Também será possível futuramente levar esse mesmo cálculo para o Painel principal.
 
-**Opção B**: Exigir cadastro **antes** do checkout. Usuário cria conta + empresa primeiro, depois paga. Mais controle, mas adiciona fricção e contradiz a estratégia atual ("botões da landing vão direto pro Stripe").
+## Arquivos que serão criados/alterados
 
-**Opção C**: Apenas a parte manual agora (Master Admin atribui plano). A vinculação automática Stripe → empresa fica para depois, e por enquanto você cria as empresas manualmente após receber notificação de pagamento por e-mail do Stripe.
+### Novos arquivos
+- `src/pages/Expenses.tsx`
+- `supabase/functions/extract-expense-from-receipt/index.ts`
+- nova migration para tabela `expenses`
 
+### Arquivos alterados
+- `src/App.tsx` — adicionar rota `/expenses`
+- `src/components/layout/AdminLayout.tsx` — adicionar item no menu
+- `supabase/config.toml` — configurar a função de leitura da notinha, se necessário
+
+## Detalhes técnicos
+
+- A leitura da notinha usará Lovable AI, aproveitando a chave já configurada no projeto.
+- A chamada será feita por `supabase.functions.invoke('extract-expense-from-receipt')`.
+- A imagem será enviada em base64, como já acontece no importador de produtos por foto.
+- A tabela terá RLS com `company_id`, mantendo o isolamento entre empresas.
+- A página seguirá os componentes existentes: `Dialog`, `AlertDialog`, `Input`, `Select`, `Badge`, `Calendar`, `Popover`, `Skeleton`, `Button` e `toast`.
+- Todo o texto da interface será em pt-BR e valores serão formatados em BRL.

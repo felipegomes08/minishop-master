@@ -166,12 +166,11 @@ export default function Expenses() {
     );
   }, [expenses, searchQuery]);
 
-  const expensesTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-  const balance = salesTotal - expensesTotal;
-
   const openCreateDialog = () => {
     setEditingExpense(null);
     setForm(emptyForm());
+    setSaveReceipt(false);
+    setReceiptImageBase64(null);
     setDialogOpen(true);
   };
 
@@ -184,7 +183,10 @@ export default function Expenses() {
       amount: String(Number(expense.amount || 0)),
       expenseDate: new Date(`${expense.expense_date}T12:00:00`),
       paymentMethod: expense.payment_method,
+      receiptImageUrl: expense.receipt_image_url,
     });
+    setSaveReceipt(Boolean(expense.receipt_image_url));
+    setReceiptImageBase64(null);
     setDialogOpen(true);
   };
 
@@ -198,6 +200,7 @@ export default function Expenses() {
     setReadingReceipt(true);
     try {
       const imageBase64 = await compressImage(file);
+      setReceiptImageBase64(imageBase64);
       const { data, error } = await supabase.functions.invoke("extract-expense-from-receipt", { body: { imageBase64 } });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

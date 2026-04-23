@@ -1,4 +1,4 @@
-import { Check, X, Crown, Loader2 } from "lucide-react";
+import { Check, X, Crown, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useScrollReveal } from "./useScrollReveal";
 import { toast } from "sonner";
@@ -175,18 +175,33 @@ export default function PricingSection() {
               </button>
 
               <ul className="space-y-3">
-                {plan.features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    {f.included ? (
-                      <Check size={16} className="text-emerald-400 mt-0.5 shrink-0" />
-                    ) : (
-                      <X size={16} className="text-gray-600 mt-0.5 shrink-0" />
-                    )}
-                    <span className={f.included ? "text-gray-300" : "text-gray-600"}>
-                      {f.text}
-                    </span>
-                  </li>
-                ))}
+                {plan.features.map((f, i) => {
+                  const isVirtualTryOn = f.text.includes("Experimentador virtual");
+                  const isOuroVirtualTryOn = isVirtualTryOn && plan.tier === "ouro";
+                  
+                  return (
+                    <li 
+                      key={i} 
+                      className={`flex items-start gap-2 text-sm ${
+                        isOuroVirtualTryOn ? "bg-amber-500/20 -mx-2 px-2 py-1.5 rounded-lg border border-amber-400/30" : ""
+                      }`}
+                    >
+                      {f.included ? (
+                        <Check size={16} className={`mt-0.5 shrink-0 ${isOuroVirtualTryOn ? "text-amber-400" : "text-emerald-400"}`} />
+                      ) : (
+                        <X size={16} className="text-gray-600 mt-0.5 shrink-0" />
+                      )}
+                      <span className={f.included ? (isOuroVirtualTryOn ? "text-amber-200 font-medium" : "text-gray-300") : "text-gray-600"}>
+                        {f.text}
+                        {isOuroVirtualTryOn && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-950 bg-amber-400 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                            <Sparkles size={10} /> Exclusivo
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

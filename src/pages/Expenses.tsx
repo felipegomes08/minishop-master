@@ -70,6 +70,15 @@ const formatCurrency = (value: number) => new Intl.NumberFormat("pt-BR", { style
 const formatDate = (value: string) => format(new Date(`${value}T12:00:00`), "dd/MM/yyyy", { locale: ptBR });
 const dateToInput = (date: Date) => format(date, "yyyy-MM-dd");
 
+function dataUrlToBlob(dataUrl: string) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/:(.*?);/)?.[1] || "image/jpeg";
+  const bytes = atob(base64);
+  const array = new Uint8Array(bytes.length);
+  for (let index = 0; index < bytes.length; index += 1) array[index] = bytes.charCodeAt(index);
+  return new Blob([array], { type: mime });
+}
+
 async function compressImage(file: File): Promise<string> {
   const imageUrl = URL.createObjectURL(file);
   const image = new Image();
@@ -125,26 +134,18 @@ export default function Expenses() {
         .eq("company_id", companyId)
         .order("expense_date", { ascending: false });
 
-      let salesQuery = supabase.from("sales").select("total, created_at").eq("company_id", companyId);
-
       if (startDate) {
         expensesQuery = expensesQuery.gte("expense_date", dateToInput(startDate));
-        salesQuery = salesQuery.gte("created_at", startDate.toISOString());
       }
       if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
         expensesQuery = expensesQuery.lte("expense_date", dateToInput(endDate));
-        salesQuery = salesQuery.lte("created_at", end.toISOString());
       }
 
-      const [{ data: expensesData, error: expensesError }, { data: salesData, error: salesError }] = await Promise.all([expensesQuery, salesQuery]);
+      const { data: expensesData, error: expensesError } = await expensesQuery;
 
       if (expensesError) throw expensesError;
-      if (salesError) throw salesError;
 
       setExpenses((expensesData || []) as Expense[]);
-      setSalesTotal((salesData || []).reduce((sum, sale) => sum + Number(sale.total || 0), 0));
     } catch (error) {
       console.error("Erro ao buscar despesas:", error);
       toast({ title: "Erro ao carregar despesas", description: "Tente novamente em alguns instantes.", variant: "destructive" });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,7 @@ interface CategoryNode extends Category {
 }
 
 export default function Categories() {
+  const { companyId } = useCompanyContext();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -46,11 +48,13 @@ export default function Categories() {
   });
 
   const fetchCategories = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .eq('company_id', companyId)
         .order('sort_order');
 
       if (error) throw error;
@@ -63,8 +67,8 @@ export default function Categories() {
   };
 
   useEffect(() => {
-    fetchCategories();
-  }, []);
+    if (companyId) fetchCategories();
+  }, [companyId]);
 
   const buildTree = (items: Category[], parentId: string | null = null): CategoryNode[] => {
     return items
@@ -118,19 +122,26 @@ export default function Categories() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
     try {
       const categoryData = {
         name: formData.name,
-        parent_id: formData.parent_id || null
+        parent_id: formData.parent_id || null,
+        company_id: companyId
       };
 
       if (editingCategory) {
         const { error } = await supabase
           .from('categories')
           .update(categoryData)
-          .eq('id', editingCategory.id);
+          .eq('id', editingCategory.id)
+          .eq('company_id', companyId);
 
         if (error) throw error;
         toast({ title: 'Categoria atualizada com sucesso' });

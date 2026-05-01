@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -79,6 +80,7 @@ interface Sale {
 }
 
 export default function Sales() {
+  const { companyId } = useCompanyContext();
   const [sales, setSales] = useState<Sale[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -106,6 +108,7 @@ export default function Sales() {
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
 
   const fetchData = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
       const fromDate = dateRange?.from ? startOfDay(dateRange.from).toISOString() : undefined;
@@ -114,6 +117,7 @@ export default function Sales() {
       let salesQuery = supabase
         .from('sales')
         .select('*, customers(name), sale_items(*)')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
       if (fromDate) salesQuery = salesQuery.gte('created_at', fromDate);
@@ -121,9 +125,9 @@ export default function Sales() {
 
       const [salesRes, productsRes, customersRes, couponsRes] = await Promise.all([
         salesQuery,
-        supabase.from('products').select('*').eq('is_active', true),
-        supabase.from('customers').select('id, name'),
-        supabase.from('coupons').select('*').eq('is_active', true)
+        supabase.from('products').select('*').eq('company_id', companyId).eq('is_active', true),
+        supabase.from('customers').select('id, name').eq('company_id', companyId),
+        supabase.from('coupons').select('*').eq('company_id', companyId).eq('is_active', true)
       ]);
 
       if (salesRes.data) setSales(salesRes.data);
@@ -159,8 +163,8 @@ export default function Sales() {
   }, [selectedCustomer]);
 
   useEffect(() => {
-    fetchData();
-  }, [dateRange]);
+    if (companyId) fetchData();
+  }, [dateRange, companyId]);
 
   const resetCart = () => {
     setCart([]);
@@ -279,6 +283,11 @@ export default function Sales() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -292,7 +301,8 @@ export default function Sales() {
           coupon_discount: couponDiscount,
           manual_discount: manualDiscount,
           total: cartTotal,
-          status: 'concluída'
+          status: 'concluída',
+          company_id: companyId
         }])
         .select()
         .single();

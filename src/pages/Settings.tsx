@@ -160,6 +160,10 @@ export default function Settings() {
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
 
     setUploadingBanner(true);
     try {
@@ -183,7 +187,8 @@ export default function Settings() {
           title: newBannerData.title || null,
           link: newBannerData.link || null,
           sort_order: banners.length,
-          is_active: true
+          is_active: true,
+          company_id: companyId
         }]);
 
       if (insertError) throw insertError;
@@ -233,31 +238,26 @@ export default function Settings() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const settingsData = {
-        store_name: formData.store_name,
-        logo_url: formData.logo_url || null,
-        primary_color: formData.primary_color,
-        secondary_color: formData.secondary_color,
-        whatsapp_number: formData.whatsapp_number || null
-      };
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          name: formData.store_name,
+          logo_url: formData.logo_url || null,
+          primary_color: formData.primary_color,
+          secondary_color: formData.secondary_color,
+          whatsapp_number: formData.whatsapp_number || null
+        })
+        .eq('id', companyId);
 
-      if (settings) {
-        const { error } = await supabase
-          .from('store_settings')
-          .update(settingsData)
-          .eq('id', settings.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('store_settings')
-          .insert([settingsData]);
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       toast({ title: 'Configurações salvas com sucesso' });
       fetchData();

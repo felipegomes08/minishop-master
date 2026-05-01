@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +51,7 @@ interface ProductAttribute {
 }
 
 export default function Attributes() {
+  const { companyId } = useCompanyContext();
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -75,19 +77,25 @@ export default function Attributes() {
   });
 
   const fetchData = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
       const { data: attributesData, error: attrError } = await supabase
         .from('product_attributes')
         .select('*')
+        .eq('company_id', companyId)
         .order('sort_order');
 
       if (attrError) throw attrError;
 
-      const { data: optionsData, error: optError } = await supabase
-        .from('attribute_options')
-        .select('*')
-        .order('sort_order');
+      const attrIds = (attributesData || []).map(a => a.id);
+      const { data: optionsData, error: optError } = attrIds.length
+        ? await supabase
+            .from('attribute_options')
+            .select('*')
+            .in('attribute_id', attrIds)
+            .order('sort_order')
+        : { data: [], error: null };
 
       if (optError) throw optError;
 
@@ -97,8 +105,6 @@ export default function Attributes() {
       }));
 
       setAttributes(attributesWithOptions);
-      
-      // Expand all by default
       setExpandedAttributes(new Set(attributesWithOptions.map(a => a.id)));
     } catch (error) {
       console.error('Erro ao buscar atributos:', error);
@@ -109,8 +115,8 @@ export default function Attributes() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (companyId) fetchData();
+  }, [companyId]);
 
   const resetAttributeForm = () => {
     setAttributeForm({ name: '', is_active: true });
@@ -184,6 +190,11 @@ export default function Attributes() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingAttribute) {
@@ -193,7 +204,8 @@ export default function Attributes() {
             name: attributeForm.name,
             is_active: attributeForm.is_active
           })
-          .eq('id', editingAttribute.id);
+          .eq('id', editingAttribute.id)
+          .eq('company_id', companyId);
 
         if (error) throw error;
         toast({ title: 'Atributo atualizado com sucesso' });
@@ -204,7 +216,8 @@ export default function Attributes() {
           .insert([{
             name: attributeForm.name,
             is_active: attributeForm.is_active,
-            sort_order: maxSortOrder + 1
+            sort_order: maxSortOrder + 1,
+            company_id: companyId
           }]);
 
         if (error) throw error;

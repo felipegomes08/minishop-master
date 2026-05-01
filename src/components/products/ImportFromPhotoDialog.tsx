@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { 
   Camera, 
   Upload, 
@@ -55,6 +56,7 @@ interface Props {
 }
 
 export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSuccess }: Props) {
+  const { companyId } = useCompanyContext();
   const [step, setStep] = useState<'capture' | 'processing' | 'preview' | 'saving'>('capture');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [extractedProducts, setExtractedProducts] = useState<ExtractedProduct[]>([]);
@@ -160,11 +162,12 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
             name: p.name,
             description: p.description || null,
             cost_price: p.unitPrice,
-            price: Math.round(salePrice * 100) / 100, // Round to 2 decimal places
+            price: Math.round(salePrice * 100) / 100,
             stock: p.quantity,
             category_id: defaultCategoryId || null,
             is_active: true,
-            images: []
+            images: [],
+            company_id: companyId!
           };
         });
 

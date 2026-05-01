@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -43,6 +44,7 @@ interface ProductVariantEditorProps {
 }
 
 export function ProductVariantEditor({ productId, basePrice }: ProductVariantEditorProps) {
+  const { companyId } = useCompanyContext();
   const [attributes, setAttributes] = useState<ProductAttribute[]>([]);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +141,11 @@ export function ProductVariantEditor({ productId, basePrice }: ProductVariantEdi
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     if (selectedOptions.size === 0) {
       toast({ title: 'Selecione pelo menos uma opção', variant: 'destructive' });
       return;
@@ -154,7 +161,8 @@ export function ProductVariantEditor({ productId, basePrice }: ProductVariantEdi
           sku: newVariant.sku || null,
           price_adjustment: parseFloat(newVariant.price_adjustment) || 0,
           stock: parseInt(newVariant.stock) || 0,
-          is_active: true
+          is_active: true,
+          company_id: companyId
         }])
         .select()
         .single();

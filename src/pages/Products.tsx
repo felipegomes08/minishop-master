@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -74,6 +75,7 @@ interface EditingRow {
 }
 
 export default function Products() {
+  const { companyId } = useCompanyContext();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,11 +105,12 @@ export default function Products() {
   });
 
   const fetchData = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
       const [productsRes, categoriesRes] = await Promise.all([
-        supabase.from('products').select('*').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*')
+        supabase.from('products').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+        supabase.from('categories').select('*').eq('company_id', companyId)
       ]);
 
       if (productsRes.data) setProducts(productsRes.data);
@@ -120,8 +123,8 @@ export default function Products() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (companyId) fetchData();
+  }, [companyId]);
 
   const resetForm = () => {
     setFormData({
@@ -247,6 +250,11 @@ export default function Products() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -259,14 +267,16 @@ export default function Products() {
         stock: formData.stock ? parseInt(formData.stock) : null,
         category_id: formData.category_id || null,
         is_active: formData.is_active,
-        images: formData.images
+        images: formData.images,
+        company_id: companyId
       };
 
       if (editingProduct) {
         const { error } = await supabase
           .from('products')
           .update(productData)
-          .eq('id', editingProduct.id);
+          .eq('id', editingProduct.id)
+          .eq('company_id', companyId);
 
         if (error) throw error;
         toast({ title: 'Produto atualizado com sucesso' });
@@ -291,11 +301,12 @@ export default function Products() {
   };
 
   const duplicateProduct = async (product: Product) => {
+    if (!companyId) return;
     try {
       const { id, created_at, ...productData } = product;
       const { error } = await supabase
         .from('products')
-        .insert([{ ...productData, name: `${product.name} (Cópia)` }]);
+        .insert([{ ...productData, name: `${product.name} (Cópia)`, company_id: companyId }]);
 
       if (error) throw error;
       toast({ title: 'Produto duplicado com sucesso' });

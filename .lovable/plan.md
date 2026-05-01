@@ -1,153 +1,41 @@
+## Causa raiz
 
-# Tela de Despesas com Leitor de Notinha
+Após o reforço de RLS multi-tenant, todas as políticas de `INSERT/UPDATE` exigem `company_id IS NOT NULL AND user_belongs_to_company(...) AND has_role(..., 'admin')`.
 
-## Objetivo
+As páginas administrativas antigas (Produtos, Categorias, Atributos, Clientes, Vendas, Cupons, Configurações) **não enviam `company_id`** nos inserts/updates — elas dependiam de policies antigas mais permissivas. Por isso, o `WITH CHECK` falha com `42501: new row violates row-level security policy`.
 
-Criar uma nova tela administrativa **Despesas**, no mesmo padrão visual e funcional da tela de **Vendas**, para registrar gastos da empresa e permitir comparar:
+A página Despesas funciona porque já usa `useCompanyContext()` e injeta `company_id`.
 
-```text
-Entradas: vendas
-Saídas: despesas
-Resultado: entradas - saídas
-```
+## Correção
 
-## O que será implementado
+Em cada página afetada:
 
-### 1. Banco de dados
+1. Importar `useCompanyContext` e obter `companyId`.
+2. Filtrar todas as queries `SELECT` por `.eq('company_id', companyId)` (defesa em profundidade — RLS já filtra, mas garante consistência).
+3. Incluir `company_id: companyId` em todos os payloads de `INSERT`.
+4. Em updates/deletes, adicionar `.eq('company_id', companyId)` por segurança.
+5. Bloquear submit se `companyId` estiver indisponível.
 
-Criar uma nova tabela `expenses` com isolamento por empresa:
+### Páginas a editar
 
-- `id`
-- `company_id`
-- `title` — nome/descrição curta da despesa
-- `description` — observações opcionais
-- `category` — categoria simples, ex: Aluguel, Compra de produtos, Marketing, Taxas, Outros
-- `amount` — valor da despesa
-- `expense_date` — data da despesa
-- `payment_method` — Pix, dinheiro, cartão, boleto, transferência, outros
-- `receipt_image_url` — opcional, caso seja decidido salvar a imagem da notinha
-- `created_at`
-- `updated_at`
+| Página | Tabelas envolvidas |
+|---|---|
+| `src/pages/Categories.tsx` | `categories` |
+| `src/pages/Attributes.tsx` | `product_attributes`, `attribute_options` (via attribute_id; herda) |
+| `src/pages/Customers.tsx` | `customers`, `customer_coupons` (herda) |
+| `src/pages/Coupons.tsx` | `coupons` |
+| `src/pages/Products.tsx` | `products`, `product_variants`, `product_variant_options` (herda) |
+| `src/pages/Sales.tsx` | `sales` (sale_items herda via sale_id) |
+| `src/pages/Settings.tsx` | atualizar `companies` (logo, cores, whatsapp) em vez de `store_settings` legado |
 
-Regras de segurança:
-- Usuários administradores só acessam despesas da própria empresa.
-- Super Admin consegue gerenciar todas.
-- A tabela seguirá o mesmo padrão multiempresa já usado em vendas, produtos e clientes.
+### Observação sobre Settings
 
-### 2. Leitor de notinha com IA
+A tela `Settings.tsx` está escrevendo em `store_settings`, que agora é restrito apenas a super admins (legado). Vou redirecioná-la para atualizar a tabela `companies` da empresa logada (campos `logo_url`, `primary_color`, `secondary_color`, `whatsapp_number`, `name`), que é o local correto na arquitetura multi-tenant atual.
 
-Criar uma função de backend `extract-expense-from-receipt`.
+### Componentes auxiliares
 
-Funcionamento:
+Verificar e ajustar `ProductVariantEditor` e `ImportFromPhotoDialog` se eles fizerem inserts diretos em `product_variants` / `products` sem `company_id`.
 
-```text
-Usuário anexa/tira foto da notinha
-        ↓
-Imagem é enviada para a IA
-        ↓
-IA retorna valor, data, estabelecimento e sugestão de categoria
-        ↓
-Formulário de despesa é preenchido automaticamente
-        ↓
-Usuário revisa e salva
-```
+## Resultado esperado
 
-Campos extraídos pela IA:
-- valor total
-- data da compra, se estiver visível
-- nome do estabelecimento/fornecedor, se estiver visível
-- categoria sugerida
-- descrição curta
-
-A foto será usada para leitura da notinha. A implementação pode manter a imagem apenas em memória durante a extração, evitando salvar automaticamente arquivos sensíveis. Se quiser guardar comprovantes para consulta posterior, será possível salvar também o `receipt_image_url`.
-
-### 3. Nova página `Despesas`
-
-Criar `src/pages/Expenses.tsx`, seguindo o formato da tela de Vendas:
-
-Funcionalidades:
-- Listagem de despesas
-- Filtro por busca
-- Filtro por período
-- Cards de resumo:
-  - Total de despesas no período
-  - Total de vendas no período
-  - Saldo do período
-- Botão **Nova Despesa**
-- Criar despesa manualmente
-- Usar leitor de notinha para preencher os dados
-- Editar despesa
-- Ver detalhes
-- Excluir despesa com confirmação
-- Loading states e empty states no padrão atual
-
-Campos do formulário:
-- Título
-- Valor
-- Data
-- Categoria
-- Forma de pagamento
-- Observações
-- Anexar/ler notinha com IA
-
-### 4. Navegação
-
-Adicionar a nova tela ao menu lateral:
-
-```text
-Painel
-Produtos
-Categorias
-Atributos
-Clientes
-Vendas
-Despesas
-Cupons
-Configurações
-```
-
-Também adicionar a rota protegida:
-
-```text
-/expenses
-```
-
-A tela será acessível apenas para usuários administradores da empresa, igual à tela de Vendas.
-
-### 5. Balanço entre entradas e saídas
-
-Na própria tela de Despesas, o usuário verá o resumo financeiro do período:
-
-```text
-Entradas        R$ 10.000,00
-Saídas          R$  3.200,00
-Saldo           R$  6.800,00
-```
-
-O saldo ficará visualmente:
-- verde quando positivo
-- vermelho quando negativo
-- neutro quando zerado
-
-Também será possível futuramente levar esse mesmo cálculo para o Painel principal.
-
-## Arquivos que serão criados/alterados
-
-### Novos arquivos
-- `src/pages/Expenses.tsx`
-- `supabase/functions/extract-expense-from-receipt/index.ts`
-- nova migration para tabela `expenses`
-
-### Arquivos alterados
-- `src/App.tsx` — adicionar rota `/expenses`
-- `src/components/layout/AdminLayout.tsx` — adicionar item no menu
-- `supabase/config.toml` — configurar a função de leitura da notinha, se necessário
-
-## Detalhes técnicos
-
-- A leitura da notinha usará Lovable AI, aproveitando a chave já configurada no projeto.
-- A chamada será feita por `supabase.functions.invoke('extract-expense-from-receipt')`.
-- A imagem será enviada em base64, como já acontece no importador de produtos por foto.
-- A tabela terá RLS com `company_id`, mantendo o isolamento entre empresas.
-- A página seguirá os componentes existentes: `Dialog`, `AlertDialog`, `Input`, `Select`, `Badge`, `Calendar`, `Popover`, `Skeleton`, `Button` e `toast`.
-- Todo o texto da interface será em pt-BR e valores serão formatados em BRL.
+Após o ajuste, o usuário da Streetware (e qualquer empresa nova) consegue criar/editar Produtos, Categorias, Atributos, Clientes, Vendas, Cupons e Configurações normalmente, com isolamento total entre empresas.

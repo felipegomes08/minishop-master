@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,6 +48,7 @@ interface CustomerCoupon {
 }
 
 export default function Customers() {
+  const { companyId } = useCompanyContext();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [customerCouponsMap, setCustomerCouponsMap] = useState<Record<string, CustomerCoupon[]>>({});
@@ -65,18 +67,18 @@ export default function Customers() {
   });
 
   const fetchData = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
       const [customersRes, couponsRes, customerCouponsRes] = await Promise.all([
-        supabase.from('customers').select('*').order('created_at', { ascending: false }),
-        supabase.from('coupons').select('*').eq('is_active', true),
-        supabase.from('customer_coupons').select('*, coupons(*)')
+        supabase.from('customers').select('*').eq('company_id', companyId).order('created_at', { ascending: false }),
+        supabase.from('coupons').select('*').eq('company_id', companyId).eq('is_active', true),
+        supabase.from('customer_coupons').select('*, coupons(*), customers!inner(company_id)').eq('customers.company_id', companyId)
       ]);
 
       if (customersRes.data) setCustomers(customersRes.data);
       if (couponsRes.data) setCoupons(couponsRes.data);
       
-      // Agrupar cupons por cliente
       if (customerCouponsRes.data) {
         const map: Record<string, CustomerCoupon[]> = {};
         customerCouponsRes.data.forEach((cc: any) => {
@@ -93,8 +95,8 @@ export default function Customers() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (companyId) fetchData();
+  }, [companyId]);
 
   const resetForm = () => {
     setFormData({ name: '', phone: '', address: '', notes: '' });
@@ -121,6 +123,11 @@ export default function Customers() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -128,14 +135,16 @@ export default function Customers() {
         name: formData.name,
         phone: formData.phone || null,
         address: formData.address || null,
-        notes: formData.notes || null
+        notes: formData.notes || null,
+        company_id: companyId
       };
 
       if (editingCustomer) {
         const { error } = await supabase
           .from('customers')
           .update(customerData)
-          .eq('id', editingCustomer.id);
+          .eq('id', editingCustomer.id)
+          .eq('company_id', companyId);
 
         if (error) throw error;
         toast({ title: 'Cliente atualizado com sucesso' });

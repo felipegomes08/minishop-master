@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,9 +23,9 @@ import {
   Info
 } from 'lucide-react';
 
-interface StoreSettings {
+interface CompanySettings {
   id: string;
-  store_name: string;
+  name: string;
   logo_url: string | null;
   primary_color: string;
   secondary_color: string;
@@ -42,7 +43,8 @@ interface Banner {
 
 export default function Settings() {
   const { user } = useAuth();
-  const [settings, setSettings] = useState<StoreSettings | null>(null);
+  const { companyId } = useCompanyContext();
+  const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -61,21 +63,30 @@ export default function Settings() {
   });
 
   const fetchData = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
-      const [settingsRes, bannersRes] = await Promise.all([
-        supabase.from('store_settings').select('*').single(),
-        supabase.from('banners').select('*').order('sort_order')
+      const [companyRes, bannersRes] = await Promise.all([
+        supabase.from('companies').select('*').eq('id', companyId).single(),
+        supabase.from('banners').select('*').eq('company_id', companyId).order('sort_order')
       ]);
 
-      if (settingsRes.data) {
-        setSettings(settingsRes.data);
+      if (companyRes.data) {
+        const c = companyRes.data;
+        setSettings({
+          id: c.id,
+          name: c.name,
+          logo_url: c.logo_url,
+          primary_color: c.primary_color || '#4F46E5',
+          secondary_color: c.secondary_color || '#F59E0B',
+          whatsapp_number: c.whatsapp_number,
+        });
         setFormData({
-          store_name: settingsRes.data.store_name,
-          logo_url: settingsRes.data.logo_url || '',
-          primary_color: settingsRes.data.primary_color,
-          secondary_color: settingsRes.data.secondary_color,
-          whatsapp_number: settingsRes.data.whatsapp_number || ''
+          store_name: c.name,
+          logo_url: c.logo_url || '',
+          primary_color: c.primary_color || '#4F46E5',
+          secondary_color: c.secondary_color || '#F59E0B',
+          whatsapp_number: c.whatsapp_number || ''
         });
       }
 
@@ -88,8 +99,8 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (companyId) fetchData();
+  }, [companyId]);
 
   const handleResetPassword = async () => {
     if (!user?.email) {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,6 +41,7 @@ interface Coupon {
 }
 
 export default function Coupons() {
+  const { companyId } = useCompanyContext();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -59,11 +61,13 @@ export default function Coupons() {
   });
 
   const fetchCoupons = async () => {
+    if (!companyId) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('coupons')
         .select('*')
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -76,8 +80,8 @@ export default function Coupons() {
   };
 
   useEffect(() => {
-    fetchCoupons();
-  }, []);
+    if (companyId) fetchCoupons();
+  }, [companyId]);
 
   const resetForm = () => {
     setFormData({
@@ -121,6 +125,11 @@ export default function Coupons() {
       return;
     }
 
+    if (!companyId) {
+      toast({ title: 'Empresa não identificada', variant: 'destructive' });
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -132,14 +141,16 @@ export default function Coupons() {
         min_purchase: formData.min_purchase || 0,
         max_uses: formData.max_uses ? parseInt(formData.max_uses) : null,
         valid_until: formData.valid_until ? new Date(formData.valid_until).toISOString() : null,
-        is_active: formData.is_active
+        is_active: formData.is_active,
+        company_id: companyId
       };
 
       if (editingCoupon) {
         const { error } = await supabase
           .from('coupons')
           .update(couponData)
-          .eq('id', editingCoupon.id);
+          .eq('id', editingCoupon.id)
+          .eq('company_id', companyId);
 
         if (error) throw error;
         toast({ title: 'Cupom atualizado com sucesso' });

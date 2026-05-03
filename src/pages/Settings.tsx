@@ -57,6 +57,7 @@ interface Banner {
 export default function Settings() {
   const { user } = useAuth();
   const { companyId } = useCompanyContext();
+  const { planTier, planStatus, subscriptionEnd, isActive } = useSubscription();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);

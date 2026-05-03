@@ -172,7 +172,7 @@ export default function Settings() {
     setUploadingBanner(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `banner-${Date.now()}.${fileExt}`;
+      const fileName = `${companyId}/banner-${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('product-images')

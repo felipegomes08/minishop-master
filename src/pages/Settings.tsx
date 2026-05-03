@@ -485,8 +485,74 @@ export default function Settings() {
           </div>
         </form>
 
-        {/* Coluna Direita - Segurança e Banners */}
+        {/* Coluna Direita - Plano, Ajuda, Segurança e Banners */}
         <div className="space-y-6">
+          {/* Plano Contratado */}
+          <div className="form-section space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Crown className="w-4 h-4" />
+              Plano Contratado
+            </h3>
+            <div className="p-4 rounded-lg bg-secondary/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Plano atual</span>
+                {planTier && PLAN_LABELS[planTier] ? (
+                  <Badge className={PLAN_LABELS[planTier].color}>
+                    {PLAN_LABELS[planTier].label}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Sem plano ativo</Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge variant={isActive ? 'default' : 'secondary'}>
+                  {planStatus === 'active' && 'Ativa'}
+                  {planStatus === 'trialing' && 'Período de teste'}
+                  {planStatus === 'manual' && 'Manual'}
+                  {planStatus === 'past_due' && 'Pagamento pendente'}
+                  {planStatus === 'canceled' && 'Cancelada'}
+                  {!planStatus && 'Inativa'}
+                </Badge>
+              </div>
+              {subscriptionEnd && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Renova em</span>
+                  <span className="text-sm font-medium">
+                    {new Date(subscriptionEnd).toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ajuda / Suporte */}
+          <div className="form-section space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <HelpCircle className="w-4 h-4" />
+              Ajuda e Suporte
+            </h3>
+            <div className="p-4 rounded-lg bg-secondary/30 space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Precisa alterar seu plano, cancelar assinatura ou tirar dúvidas?
+                Fale diretamente com nosso suporte pelo WhatsApp.
+              </p>
+              <Button
+                type="button"
+                className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white"
+                onClick={() => {
+                  const msg = encodeURIComponent(
+                    `Olá! Sou da loja "${formData.store_name || 'minha empresa'}" e gostaria de ajuda com meu plano.`
+                  );
+                  window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${msg}`, '_blank');
+                }}
+              >
+                <MessageCircle className="w-4 h-4" />
+                Falar com Suporte no WhatsApp
+              </Button>
+            </div>
+          </div>
+
           {/* Segurança */}
           <div className="form-section space-y-4">
             <h3 className="font-semibold flex items-center gap-2">

@@ -22,8 +22,19 @@ import {
   ImagePlus,
   Trash2,
   GripVertical,
-  Info
+  Info,
+  Crown,
+  HelpCircle,
+  MessageCircle
 } from 'lucide-react';
+
+const SUPPORT_WHATSAPP = '5519996688116';
+
+const PLAN_LABELS: Record<string, { label: string; color: string }> = {
+  bronze: { label: 'Bronze', color: 'bg-amber-700 text-white' },
+  prata: { label: 'Prata', color: 'bg-slate-400 text-white' },
+  ouro: { label: 'Ouro', color: 'bg-yellow-500 text-white' },
+};
 
 interface CompanySettings {
   id: string;

@@ -38,8 +38,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdminCheck();
+  const { allowedMenus, isRestricted, loading: permLoading } = useUserPermissions();
+  const location = useLocation();
 
-  if (authLoading || adminLoading || superAdminLoading) {
+  if (authLoading || adminLoading || superAdminLoading || permLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -58,6 +60,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAdmin) {
     return <Navigate to="/auth?error=unauthorized" replace />;
+  }
+
+  // Bloqueia acesso direto via URL para funcionários sem permissão
+  if (isRestricted) {
+    const menuKey = PATH_TO_MENU_KEY[location.pathname];
+    if (menuKey && menuKey !== 'dashboard' && !allowedMenus.has(menuKey)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <AdminLayout>{children}</AdminLayout>;

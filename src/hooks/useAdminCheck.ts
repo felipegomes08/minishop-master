@@ -21,12 +21,39 @@ export function useAdminCheck() {
           _role: 'admin'
         });
 
-        if (error) {
-          console.error('Erro ao verificar admin:', error);
+        if (error || data !== true) {
+          if (error) console.error('Erro ao verificar admin:', error);
           setIsAdmin(false);
-        } else {
-          setIsAdmin(data === true);
+          setLoading(false);
+          return;
         }
+
+        // Validar se empresa está ativa
+        const { data: companyId } = await supabase.rpc('get_user_company_id', {
+          _user_id: user.id,
+        });
+
+        if (!companyId) {
+          setIsAdmin(false);
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        const { data: companyData } = await supabase
+          .from('companies')
+          .select('is_active')
+          .eq('id', companyId)
+          .maybeSingle();
+
+        if (!companyData?.is_active) {
+          setIsAdmin(false);
+          await supabase.auth.signOut();
+          setLoading(false);
+          return;
+        }
+
+        setIsAdmin(true);
       } catch (err) {
         console.error('Exceção ao verificar admin:', err);
         setIsAdmin(false);

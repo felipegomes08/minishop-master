@@ -2,10 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useSuperAdminCheck } from "@/hooks/useSuperAdminCheck";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { PATH_TO_MENU_KEY } from "@/lib/planLimits";
 import AdminLayout from "@/components/layout/AdminLayout";
 import MasterAdminLayout from "@/components/layout/MasterAdminLayout";
 import Index from "./pages/Index";
@@ -20,6 +22,7 @@ import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
+import Users from "./pages/Users";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
 import Landing from "./pages/Landing";
@@ -35,8 +38,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdminCheck();
+  const { allowedMenus, isRestricted, loading: permLoading } = useUserPermissions();
+  const location = useLocation();
 
-  if (authLoading || adminLoading || superAdminLoading) {
+  if (authLoading || adminLoading || superAdminLoading || permLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -55,6 +60,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!isAdmin) {
     return <Navigate to="/auth?error=unauthorized" replace />;
+  }
+
+  // Bloqueia acesso direto via URL para funcionários sem permissão
+  if (isRestricted) {
+    const menuKey = PATH_TO_MENU_KEY[location.pathname];
+    if (menuKey && menuKey !== 'dashboard' && !allowedMenus.has(menuKey)) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <AdminLayout>{children}</AdminLayout>;
@@ -110,6 +123,7 @@ function AppRoutes() {
       <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
       <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
       <Route path="/coupons" element={<ProtectedRoute><Coupons /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

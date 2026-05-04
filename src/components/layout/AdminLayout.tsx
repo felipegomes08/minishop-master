@@ -43,8 +43,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { signOut } = useAuth();
+  const { allowedMenus, isRestricted } = useUserPermissions();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const visibleNavItems = isRestricted
+    ? navItems.filter((i) => allowedMenus.has(i.menuKey))
+    : navItems;
 
   const handleNavClick = (path: string) => {
     navigate(path);

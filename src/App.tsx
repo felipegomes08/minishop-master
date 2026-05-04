@@ -22,6 +22,7 @@ import Settings from "./pages/Settings";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
+import Users from "./pages/Users";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
 import Landing from "./pages/Landing";

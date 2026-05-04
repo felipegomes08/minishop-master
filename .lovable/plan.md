@@ -1,41 +1,56 @@
-## Causa raiz
+## Tela de Usuários da Empresa
 
-Após o reforço de RLS multi-tenant, todas as políticas de `INSERT/UPDATE` exigem `company_id IS NOT NULL AND user_belongs_to_company(...) AND has_role(..., 'admin')`.
+Criar uma página `/users` no painel admin onde o dono da empresa cria/gerencia funcionários, escolhe quais menus eles veem e respeita o limite do plano contratado.
 
-As páginas administrativas antigas (Produtos, Categorias, Atributos, Clientes, Vendas, Cupons, Configurações) **não enviam `company_id`** nos inserts/updates — elas dependiam de policies antigas mais permissivas. Por isso, o `WITH CHECK` falha com `42501: new row violates row-level security policy`.
+### Limites por plano (já definidos na landing)
+- Bronze: 1 usuário
+- Prata: 3 usuários
+- Ouro: 10 usuários
 
-A página Despesas funciona porque já usa `useCompanyContext()` e injeta `company_id`.
+(O próprio admin conta no limite.)
 
-## Correção
+### Mudanças no banco
 
-Em cada página afetada:
+1. **Nova tabela `user_menu_permissions`** — guarda quais menus cada usuário (não-admin) pode ver:
+   - `id`, `user_id` (uuid), `company_id` (uuid), `menu_key` (text), `created_at`
+   - Unique em (`user_id`, `menu_key`)
+   - RLS:
+     - Admin da empresa pode gerenciar (CRUD) das permissões dos usuários da sua empresa
+     - O próprio usuário pode ler suas permissões (`user_id = auth.uid()`)
+     - Super admin: tudo
 
-1. Importar `useCompanyContext` e obter `companyId`.
-2. Filtrar todas as queries `SELECT` por `.eq('company_id', companyId)` (defesa em profundidade — RLS já filtra, mas garante consistência).
-3. Incluir `company_id: companyId` em todos os payloads de `INSERT`.
-4. Em updates/deletes, adicionar `.eq('company_id', companyId)` por segurança.
-5. Bloquear submit se `companyId` estiver indisponível.
+2. **Edge function `create-company-user`** (verify_jwt = true) — usa `SUPABASE_SERVICE_ROLE_KEY` para:
+   - Validar que quem chama é admin da empresa (via `has_role` + `get_user_company_id`)
+   - Validar limite do plano (conta `company_users` da empresa contra o limite do `plan_tier`)
+   - Criar usuário em `auth.users` (`admin.createUser`, email_confirm: true)
+   - Inserir em `company_users` (role `user`)
+   - Inserir em `user_roles` (role `admin` — para passar pelo `useAdminCheck` atual; permissão real vem dos menus)
+   - Inserir as `user_menu_permissions` selecionadas
+   - Retornar o `user_id` criado
 
-### Páginas a editar
+3. **Edge function `delete-company-user`** — admin remove funcionário: deleta `auth.users`, cascateando vínculos.
 
-| Página | Tabelas envolvidas |
-|---|---|
-| `src/pages/Categories.tsx` | `categories` |
-| `src/pages/Attributes.tsx` | `product_attributes`, `attribute_options` (via attribute_id; herda) |
-| `src/pages/Customers.tsx` | `customers`, `customer_coupons` (herda) |
-| `src/pages/Coupons.tsx` | `coupons` |
-| `src/pages/Products.tsx` | `products`, `product_variants`, `product_variant_options` (herda) |
-| `src/pages/Sales.tsx` | `sales` (sale_items herda via sale_id) |
-| `src/pages/Settings.tsx` | atualizar `companies` (logo, cores, whatsapp) em vez de `store_settings` legado |
+### Mudanças no frontend
 
-### Observação sobre Settings
+1. **`src/pages/Users.tsx`** (nova): lista funcionários da empresa, botão "Adicionar usuário" (desabilitado quando atinge o limite do plano, com tooltip explicando), dialog com:
+   - Nome, email, senha
+   - Checkboxes dos menus disponíveis (Painel, Produtos, Categorias, Atributos, Clientes, Vendas, Despesas, Cupons, Configurações)
+   - Painel sempre marcado por padrão
+   - Botão "Excluir" por linha
+   - Card no topo mostrando "X de Y usuários usados" conforme o plano
 
-A tela `Settings.tsx` está escrevendo em `store_settings`, que agora é restrito apenas a super admins (legado). Vou redirecioná-la para atualizar a tabela `companies` da empresa logada (campos `logo_url`, `primary_color`, `secondary_color`, `whatsapp_number`, `name`), que é o local correto na arquitetura multi-tenant atual.
+2. **`src/hooks/useUserPermissions.ts`** (novo): retorna `{ allowedMenus: Set<string>, isOwnerAdmin: boolean, loading }`. Se o usuário **só** tem entrada em `company_users` com role `admin` e foi criado pela company (não é o dono), filtra pelos menus permitidos. Para simplificar: se existir qualquer linha em `user_menu_permissions` para o usuário, ele é "funcionário restrito"; senão, é admin pleno (vê tudo).
 
-### Componentes auxiliares
+3. **`src/components/layout/AdminLayout.tsx`**: usar `useUserPermissions` para filtrar `navItems` antes de renderizar (desktop e mobile). Sempre incluir Painel.
 
-Verificar e ajustar `ProductVariantEditor` e `ImportFromPhotoDialog` se eles fizerem inserts diretos em `product_variants` / `products` sem `company_id`.
+4. **`src/App.tsx`**: incluir rota `/users` (visível apenas ao dono — funcionários restritos não veem essa entrada no menu). Para bloquear acesso direto via URL a páginas sem permissão, adicionar guard simples no `ProtectedRoute` que checa o pathname contra `allowedMenus`; se não permitido, redireciona para `/`.
 
-## Resultado esperado
+5. **`src/components/landing/PricingSection.tsx`**: nenhuma mudança (já tem os limites). Centralizar os limites em `src/lib/planLimits.ts` para uso compartilhado entre frontend e edge function.
 
-Após o ajuste, o usuário da Streetware (e qualquer empresa nova) consegue criar/editar Produtos, Categorias, Atributos, Clientes, Vendas, Cupons e Configurações normalmente, com isolamento total entre empresas.
+### Observações
+- Funcionários são tecnicamente `admin` no `user_roles` para reaproveitar o `useAdminCheck` e RLS existentes. A restrição é puramente de UI (o usuário pediu isso explicitamente: "se o usuário não tiver permissão da tela de despesas ele apenas não verá ela no menu, somente isso").
+- O dono original (criado via provisionamento Stripe) não tem entradas em `user_menu_permissions` → vê tudo, incluindo `/users`.
+- Funcionários criados sempre terão pelo menos 1 entrada em `user_menu_permissions` → não veem `/users` (a menos que seja marcada).
+
+### Texto do plano em pt-BR
+Toda a UI será em português brasileiro conforme as regras do projeto.

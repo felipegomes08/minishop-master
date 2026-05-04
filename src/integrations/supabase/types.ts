@@ -803,6 +803,30 @@ export type Database = {
           },
         ]
       }
+      user_menu_permissions: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          menu_key: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          menu_key: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          menu_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

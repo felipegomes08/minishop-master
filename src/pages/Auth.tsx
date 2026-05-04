@@ -89,6 +89,50 @@ export default function Auth() {
         console.log('Admin check:', { isAdmin, adminError });
 
         if (isAdmin) {
+          // Validar se a empresa do usuário está ativa
+          const { data: companyId } = await supabase.rpc('get_user_company_id', {
+            _user_id: user.id,
+          });
+
+          if (!companyId) {
+            toast({
+              title: 'Acesso negado',
+              description: 'Seu usuário não está vinculado a nenhuma empresa. Entre em contato com o suporte.',
+              variant: 'destructive',
+            });
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
+          const { data: companyData, error: companyErr } = await supabase
+            .from('companies')
+            .select('is_active, name')
+            .eq('id', companyId)
+            .maybeSingle();
+
+          if (companyErr || !companyData) {
+            toast({
+              title: 'Erro',
+              description: 'Não foi possível validar sua empresa. Tente novamente.',
+              variant: 'destructive',
+            });
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
+          if (!companyData.is_active) {
+            toast({
+              title: 'Empresa inativa',
+              description: `A empresa "${companyData.name}" está desativada. Entre em contato com o suporte para reativar.`,
+              variant: 'destructive',
+            });
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
           toast({
             title: 'Bem-vindo!',
             description: 'Login realizado com sucesso.',

@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,7 +18,8 @@ import {
   ChevronLeft,
   Store,
   Ticket,
-  Sliders
+  Sliders,
+  UserCog,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -25,15 +27,16 @@ interface AdminLayoutProps {
 }
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Painel' },
-  { path: '/products', icon: Package, label: 'Produtos' },
-  { path: '/categories', icon: FolderTree, label: 'Categorias' },
-  { path: '/attributes', icon: Sliders, label: 'Atributos' },
-  { path: '/customers', icon: Users, label: 'Clientes' },
-  { path: '/sales', icon: ShoppingCart, label: 'Vendas' },
-  { path: '/expenses', icon: ReceiptText, label: 'Despesas' },
-  { path: '/coupons', icon: Ticket, label: 'Cupons' },
-  { path: '/settings', icon: Settings, label: 'Configurações' },
+  { path: '/', icon: LayoutDashboard, label: 'Painel', menuKey: 'dashboard' },
+  { path: '/products', icon: Package, label: 'Produtos', menuKey: 'products' },
+  { path: '/categories', icon: FolderTree, label: 'Categorias', menuKey: 'categories' },
+  { path: '/attributes', icon: Sliders, label: 'Atributos', menuKey: 'attributes' },
+  { path: '/customers', icon: Users, label: 'Clientes', menuKey: 'customers' },
+  { path: '/sales', icon: ShoppingCart, label: 'Vendas', menuKey: 'sales' },
+  { path: '/expenses', icon: ReceiptText, label: 'Despesas', menuKey: 'expenses' },
+  { path: '/coupons', icon: Ticket, label: 'Cupons', menuKey: 'coupons' },
+  { path: '/users', icon: UserCog, label: 'Usuários', menuKey: 'users' },
+  { path: '/settings', icon: Settings, label: 'Configurações', menuKey: 'settings' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

@@ -11,7 +11,13 @@ export function getUserLimitForPlan(planTier: string | null | undefined): number
 }
 
 // Chaves de menu disponíveis para permissão
-export const MENU_KEYS = [
+export interface MenuKeyDef {
+  key: string;
+  label: string;
+  alwaysOn?: boolean;
+}
+
+export const MENU_KEYS: MenuKeyDef[] = [
   { key: 'dashboard', label: 'Painel', alwaysOn: true },
   { key: 'products', label: 'Produtos' },
   { key: 'categories', label: 'Categorias' },
@@ -22,7 +28,7 @@ export const MENU_KEYS = [
   { key: 'coupons', label: 'Cupons' },
   { key: 'users', label: 'Usuários' },
   { key: 'settings', label: 'Configurações' },
-] as const;
+];
 
 export const PATH_TO_MENU_KEY: Record<string, string> = {
   '/': 'dashboard',

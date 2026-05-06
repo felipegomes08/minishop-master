@@ -20,6 +20,7 @@ import {
   Ticket,
   Sliders,
   UserCog,
+  Wallet,
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -35,6 +36,7 @@ const navItems = [
   { path: '/sales', icon: ShoppingCart, label: 'Vendas', menuKey: 'sales' },
   { path: '/expenses', icon: ReceiptText, label: 'Despesas', menuKey: 'expenses' },
   { path: '/coupons', icon: Ticket, label: 'Cupons', menuKey: 'coupons' },
+  { path: '/financial', icon: Wallet, label: 'Financeiro', menuKey: 'financial' },
   { path: '/users', icon: UserCog, label: 'Usuários', menuKey: 'users' },
   { path: '/settings', icon: Settings, label: 'Configurações', menuKey: 'settings' },
 ];

@@ -26,6 +26,7 @@ export const MENU_KEYS: MenuKeyDef[] = [
   { key: 'sales', label: 'Vendas' },
   { key: 'expenses', label: 'Despesas' },
   { key: 'coupons', label: 'Cupons' },
+  { key: 'financial', label: 'Financeiro' },
   { key: 'users', label: 'Usuários' },
   { key: 'settings', label: 'Configurações' },
 ];
@@ -39,6 +40,7 @@ export const PATH_TO_MENU_KEY: Record<string, string> = {
   '/sales': 'sales',
   '/expenses': 'expenses',
   '/coupons': 'coupons',
+  '/financial': 'financial',
   '/users': 'users',
   '/settings': 'settings',
 };

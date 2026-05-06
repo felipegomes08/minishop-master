@@ -23,6 +23,7 @@ import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
 import Users from "./pages/Users";
+import Financial from "./pages/Financial";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
 import Landing from "./pages/Landing";
@@ -124,6 +125,7 @@ function AppRoutes() {
       <Route path="/expenses" element={<ProtectedRoute><Expenses /></ProtectedRoute>} />
       <Route path="/coupons" element={<ProtectedRoute><Coupons /></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+      <Route path="/financial" element={<ProtectedRoute><Financial /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

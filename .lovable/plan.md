@@ -1,33 +1,80 @@
-## Problema
 
-Esse comportamento é da PWA (vite-plugin-pwa) configurada no projeto. Hoje, quando uma nova versão sobe:
+# Tela Financeiro + Chat IA
 
-1. O Service Worker baixa os arquivos novos em background.
-2. Mas ele só "assume" o controle depois que **todas as abas** do site são fechadas e reabertas — por isso você só vê a nova tela após limpar o cache ou abrir em aba anônima.
-3. Além disso, o `index.html` está sendo precacheado pelo workbox, o que reforça o efeito de "tela velha".
+## Resumo
+Nova tela `/financial` com cards de Receita, Despesas e Lucro do mês atual, gráfico mensal e um chat IA que responde perguntas sobre os dados da própria loja (vendas, despesas, produtos, clientes). Acesso controlado por permissão de menu **e** por plano mínimo Prata.
 
-Não é o padrão ideal — dá pra ajustar para que toda atualização seja aplicada automaticamente no próximo refresh.
+## Acesso
+- Menu "Financeiro" aparece no sidebar conforme permissão definida em `Users.tsx` (igual aos demais menus).
+- Bloqueio adicional: empresa precisa ter `plan_tier` = `prata` ou `ouro`. Caso contrário, exibe estado de upgrade ("Disponível nos planos Prata e Ouro") com botão para abrir WhatsApp do super admin (mesmo padrão já usado em Settings).
+- `ProtectedRoute` em `App.tsx` ganha entrada `/financial` no `PATH_TO_MENU_KEY`.
+- `planLimits.ts` ganha `MENU_KEYS.financial` e a checkbox aparece automaticamente em `Users.tsx`.
 
-## Mudanças propostas (apenas em `vite.config.ts`)
+## Tela `/financial` (layout Material Design 3, pt-BR, BRL)
 
-Ajustar o bloco `VitePWA(...)`:
+```text
+┌──────────────────────────────────────────────────────────┐
+│ Financeiro · [Seletor: Mês atual ▾]                       │
+├──────────────────────────────────────────────────────────┤
+│ [Receita R$ ...] [Despesas R$ ...] [Lucro R$ ...] [Vendas N] │
+├──────────────────────────────────────────────────────────┤
+│ Gráfico de barras: Receita x Despesas (12 meses)          │
+├──────────────────────────────────────────────────────────┤
+│ Top 5 despesas por categoria  │  Últimas 5 vendas          │
+├──────────────────────────────────────────────────────────┤
+│ 💬 Assistente Financeiro (chat com IA)                    │
+└──────────────────────────────────────────────────────────┘
+```
 
-- **`workbox.skipWaiting: true`** — o novo SW assume controle imediatamente, sem esperar fechar abas.
-- **`workbox.clientsClaim: true`** — o novo SW passa a controlar abas já abertas.
-- **`workbox.cleanupOutdatedCaches: true`** — remove caches antigos do workbox.
-- **`workbox.navigateFallbackDenylist`** + **NetworkFirst para navegações HTML** — garante que `index.html` venha sempre da rede quando online (com fallback offline), evitando carregar o shell antigo.
-- Manter `registerType: "autoUpdate"` (já está correto).
+- Cards usam dados agregados via Supabase: `sales` (somatório `total` no período, filtrado por `company_id`) e `expenses` (somatório `amount`).
+- Lucro = Receita − Despesas (conforme escolhido).
+- Gráfico com `recharts` (já presente no projeto).
+- Seletor de período: mês atual (default), mês anterior, últimos 3/6/12 meses.
 
-E em `src/main.tsx`:
+## Chat IA — restrito aos dados da loja
 
-- Adicionar um pequeno listener via `virtual:pwa-register` que faz `window.location.reload()` automaticamente quando o SW novo entra em `activated`. Isso garante que, mesmo se o usuário estiver com a aba aberta no momento do deploy, ele recebe a versão nova no próximo carregamento sem ação manual.
+Componente de chat na própria página (não persistente — histórico só na sessão, sem nova tabela), seguindo padrão markdown + streaming.
 
-## Resultado esperado
+### Edge function `financial-chat`
+- `verify_jwt` padrão (valida token em código), recebe `messages[]` e `companyId`.
+- Resolve `companyId` do usuário autenticado via `get_user_company_id` (ignora qualquer companyId vindo do cliente — evita vazamento entre lojas).
+- Antes de chamar a IA, monta um **snapshot agregado** consultando com `SUPABASE_SERVICE_ROLE_KEY` filtrando SEMPRE por `company_id`:
+  - Vendas por mês (últimos 12 meses): total e quantidade
+  - Despesas por mês e por categoria
+  - Contagem de produtos ativos, estoque total, produtos com estoque baixo (<5)
+  - Quantidade de clientes
+  - Top 5 produtos mais vendidos no período
+- Envia esse snapshot como `system` message para o modelo, com instrução estrita:
+  > "Você é um assistente financeiro. Responda APENAS com base no JSON de dados fornecido desta loja. Nunca invente números. Se a pergunta não puder ser respondida pelos dados, diga que não há informação. Responda em português brasileiro, valores em BRL."
+- Modelo: **`google/gemini-2.5-flash`** (gratuito durante o período promocional do Lovable AI Gateway, rápido e suficiente).
+- Streaming SSE token a token, renderizado com `react-markdown` (já usado no projeto se disponível, senão adicionar).
 
-- Após cada publicação, basta o usuário dar refresh normal (F5) — sem precisar limpar cache nem abrir aba anônima.
-- Abas que já estavam abertas vão recarregar sozinhas assim que o novo SW for ativado (≈ alguns segundos após o deploy).
-- O modo offline da PWA continua funcionando.
+### Garantias de isolamento
+- Cliente nunca passa dados nem `company_id` para a IA — tudo é resolvido no backend a partir do JWT.
+- Snapshot só contém agregados da empresa do usuário.
+- Prompt do sistema instrui o modelo a recusar perguntas fora do escopo da loja.
 
-## Observação
+## Detalhes técnicos
 
-A primeira vez após aplicar essa mudança ainda exigirá um reload (porque o SW antigo precisa ser substituído pelo novo já com `skipWaiting`). A partir daí, todas as próximas atualizações serão automáticas.
+**Arquivos novos**
+- `src/pages/Financial.tsx` — página principal
+- `src/components/financial/FinancialChat.tsx` — UI do chat com streaming
+- `src/components/financial/FinancialSummaryCards.tsx`
+- `src/components/financial/RevenueExpenseChart.tsx`
+- `supabase/functions/financial-chat/index.ts`
+
+**Arquivos editados**
+- `src/App.tsx` — rota `/financial` protegida + `PATH_TO_MENU_KEY`
+- `src/components/layout/AdminLayout.tsx` — item de menu "Financeiro" (ícone `Wallet`/`TrendingUp`)
+- `src/lib/planLimits.ts` — adicionar `financial` em `MENU_KEYS`
+- `supabase/config.toml` — registrar a função (sem alterar `project_id`)
+
+**Sem migrações de banco** — a tela apenas lê dados existentes; o chat não persiste histórico.
+
+**Dependências** — `react-markdown` se ainda não instalado.
+
+## Validação
+- Testar com usuário de empresa Bronze: ver tela de upgrade.
+- Testar com Prata/Ouro: ver dashboard + chat funcional.
+- Testar pergunta fora do escopo ("clima de SP?") → IA recusa.
+- Testar isolamento: usuário de empresa A não vê dados da empresa B (RLS + filtro server-side na edge function).

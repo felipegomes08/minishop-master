@@ -7,12 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
-  TrendingUp, TrendingDown, Wallet, ShoppingBag, Crown, MessageCircle, Send, Sparkles, Loader2,
+  TrendingUp, TrendingDown, Wallet, ShoppingBag, Crown, MessageCircle, Send, Sparkles, Loader2, CalendarIcon,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import ReactMarkdown from 'react-markdown';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const SUPPORT_WHATSAPP = '5519996688116';
 
@@ -24,20 +28,8 @@ function monthLabel(d: Date) {
   return d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
 }
 
-type Period = 'current' | 'previous' | '3m' | '6m' | '12m';
-
-function getRange(period: Period): { start: Date; end: Date; label: string } {
-  const now = new Date();
-  if (period === 'current') {
-    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59), label: 'Mês atual' };
-  }
-  if (period === 'previous') {
-    return { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59), label: 'Mês anterior' };
-  }
-  const map = { '3m': 3, '6m': 6, '12m': 12 } as const;
-  const m = map[period];
-  return { start: new Date(now.getFullYear(), now.getMonth() - (m - 1), 1), end: now, label: `Últimos ${m} meses` };
-}
+function startOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function endOfDay(d: Date) { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; }
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
@@ -46,7 +38,8 @@ export default function Financial() {
   const { planTier, loading: subLoading } = useSubscription();
   const allowed = planTier === 'prata' || planTier === 'ouro';
 
-  const [period, setPeriod] = useState<Period>('current');
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth());
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [loading, setLoading] = useState(true);
   const [revenue, setRevenue] = useState(0);
   const [expenses, setExpenses] = useState(0);
@@ -69,20 +62,21 @@ export default function Financial() {
   useEffect(() => {
     if (!companyId || !allowed) return;
     loadData();
-  }, [companyId, period, allowed]);
+  }, [companyId, startDate, endDate, allowed]);
 
   async function loadData() {
     if (!companyId) return;
     setLoading(true);
-    const { start, end } = getRange(period);
+    const start = startDate ?? startOfMonth();
+    const end = endDate ? endOfDay(endDate) : endOfDay(new Date());
 
     const [salesRes, expRes] = await Promise.all([
       supabase.from('sales').select('id, total, created_at').eq('company_id', companyId)
         .gte('created_at', start.toISOString()).lte('created_at', end.toISOString())
         .order('created_at', { ascending: false }),
       supabase.from('expenses').select('amount, category, expense_date').eq('company_id', companyId)
-        .gte('expense_date', start.toISOString().slice(0, 10))
-        .lte('expense_date', end.toISOString().slice(0, 10)),
+        .gte('expense_date', format(start, 'yyyy-MM-dd'))
+        .lte('expense_date', format(end, 'yyyy-MM-dd')),
     ]);
 
     const sales = salesRes.data ?? [];
@@ -218,7 +212,7 @@ export default function Financial() {
     );
   }
 
-  const periodLabel = getRange(period).label;
+  const periodLabel = `${startDate ? format(startDate, 'dd/MM/yyyy') : '—'} a ${endDate ? format(endDate, 'dd/MM/yyyy') : '—'}`;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -227,16 +221,10 @@ export default function Financial() {
           <h1 className="text-3xl font-semibold tracking-tight">Financeiro</h1>
           <p className="text-muted-foreground text-sm">Resumo de receitas, despesas e desempenho da sua loja.</p>
         </div>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="current">Mês atual</SelectItem>
-            <SelectItem value="previous">Mês anterior</SelectItem>
-            <SelectItem value="3m">Últimos 3 meses</SelectItem>
-            <SelectItem value="6m">Últimos 6 meses</SelectItem>
-            <SelectItem value="12m">Últimos 12 meses</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <DateField label="Início" date={startDate} onChange={setStartDate} />
+          <DateField label="Fim" date={endDate} onChange={setEndDate} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -367,5 +355,22 @@ function SummaryCard({ icon, label, value, loading, accent }: { icon: React.Reac
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function DateField({ label, date, onChange }: { label: string; date?: Date; onChange: (d?: Date) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={cn('w-full sm:w-56 justify-start gap-2 font-normal', !date && 'text-muted-foreground')}>
+          <CalendarIcon className="h-4 w-4" />
+          <span className="text-muted-foreground">{label}:</span>
+          {date ? format(date, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-auto p-0">
+        <Calendar mode="single" selected={date} onSelect={onChange} initialFocus locale={ptBR} className="p-3 pointer-events-auto" />
+      </PopoverContent>
+    </Popover>
   );
 }

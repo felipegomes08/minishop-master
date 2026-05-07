@@ -233,6 +233,39 @@ export default function Coupons() {
     coupon.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (subLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32" />
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <div className="max-w-2xl mx-auto mt-12">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <Crown className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Recurso exclusivo dos planos Prata e Ouro</CardTitle>
+            <CardDescription>
+              A gestão de cupons de desconto está disponível a partir do plano Prata.
+              Faça upgrade para criar e gerenciar cupons para sua loja.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={() => window.open(`https://wa.me/5519996688116?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar os Cupons.')}`, '_blank')}>
+              <MessageCircle className="w-4 h-4 mr-2" /> Falar com o suporte
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="page-header flex-col sm:flex-row gap-4">

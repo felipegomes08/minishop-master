@@ -46,6 +46,9 @@ interface Coupon {
 
 export default function Coupons() {
   const { companyId } = useCompanyContext();
+  const { planTier, loading: subLoading } = useSubscription();
+  const allowed = planTier === 'prata' || planTier === 'ouro';
+
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);

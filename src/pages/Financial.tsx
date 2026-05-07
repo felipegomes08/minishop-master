@@ -28,20 +28,8 @@ function monthLabel(d: Date) {
   return d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
 }
 
-type Period = 'current' | 'previous' | '3m' | '6m' | '12m';
-
-function getRange(period: Period): { start: Date; end: Date; label: string } {
-  const now = new Date();
-  if (period === 'current') {
-    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59), label: 'Mês atual' };
-  }
-  if (period === 'previous') {
-    return { start: new Date(now.getFullYear(), now.getMonth() - 1, 1), end: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59), label: 'Mês anterior' };
-  }
-  const map = { '3m': 3, '6m': 6, '12m': 12 } as const;
-  const m = map[period];
-  return { start: new Date(now.getFullYear(), now.getMonth() - (m - 1), 1), end: now, label: `Últimos ${m} meses` };
-}
+function startOfMonth(d = new Date()) { return new Date(d.getFullYear(), d.getMonth(), 1); }
+function endOfDay(d: Date) { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; }
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string }
 

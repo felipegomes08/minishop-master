@@ -62,20 +62,21 @@ export default function Financial() {
   useEffect(() => {
     if (!companyId || !allowed) return;
     loadData();
-  }, [companyId, period, allowed]);
+  }, [companyId, startDate, endDate, allowed]);
 
   async function loadData() {
     if (!companyId) return;
     setLoading(true);
-    const { start, end } = getRange(period);
+    const start = startDate ?? startOfMonth();
+    const end = endDate ? endOfDay(endDate) : endOfDay(new Date());
 
     const [salesRes, expRes] = await Promise.all([
       supabase.from('sales').select('id, total, created_at').eq('company_id', companyId)
         .gte('created_at', start.toISOString()).lte('created_at', end.toISOString())
         .order('created_at', { ascending: false }),
       supabase.from('expenses').select('amount, category, expense_date').eq('company_id', companyId)
-        .gte('expense_date', start.toISOString().slice(0, 10))
-        .lte('expense_date', end.toISOString().slice(0, 10)),
+        .gte('expense_date', format(start, 'yyyy-MM-dd'))
+        .lte('expense_date', format(end, 'yyyy-MM-dd')),
     ]);
 
     const sales = salesRes.data ?? [];

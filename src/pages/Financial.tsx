@@ -7,12 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
-  TrendingUp, TrendingDown, Wallet, ShoppingBag, Crown, MessageCircle, Send, Sparkles, Loader2,
+  TrendingUp, TrendingDown, Wallet, ShoppingBag, Crown, MessageCircle, Send, Sparkles, Loader2, CalendarIcon,
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import ReactMarkdown from 'react-markdown';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const SUPPORT_WHATSAPP = '5519996688116';
 

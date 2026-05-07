@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +22,12 @@ import {
   Percent,
   DollarSign,
   Loader2,
-  Calendar
+  Calendar,
+  Crown,
+  MessageCircle,
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 interface Coupon {
   id: string;
@@ -42,6 +46,9 @@ interface Coupon {
 
 export default function Coupons() {
   const { companyId } = useCompanyContext();
+  const { planTier, loading: subLoading } = useSubscription();
+  const allowed = planTier === 'prata' || planTier === 'ouro';
+
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -225,6 +232,39 @@ export default function Coupons() {
     coupon.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     coupon.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (subLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-32" />
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return (
+      <div className="max-w-2xl mx-auto mt-12">
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+              <Crown className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle>Recurso exclusivo dos planos Prata e Ouro</CardTitle>
+            <CardDescription>
+              A gestão de cupons de desconto está disponível a partir do plano Prata.
+              Faça upgrade para criar e gerenciar cupons para sua loja.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Button onClick={() => window.open(`https://wa.me/5519996688116?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar os Cupons.')}`, '_blank')}>
+              <MessageCircle className="w-4 h-4 mr-2" /> Falar com o suporte
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

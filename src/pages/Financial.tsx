@@ -357,3 +357,20 @@ function SummaryCard({ icon, label, value, loading, accent }: { icon: React.Reac
     </Card>
   );
 }
+
+function DateField({ label, date, onChange }: { label: string; date?: Date; onChange: (d?: Date) => void }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className={cn('w-full sm:w-56 justify-start gap-2 font-normal', !date && 'text-muted-foreground')}>
+          <CalendarIcon className="h-4 w-4" />
+          <span className="text-muted-foreground">{label}:</span>
+          {date ? format(date, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar'}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-auto p-0">
+        <Calendar mode="single" selected={date} onSelect={onChange} initialFocus locale={ptBR} className="p-3 pointer-events-auto" />
+      </PopoverContent>
+    </Popover>
+  );
+}

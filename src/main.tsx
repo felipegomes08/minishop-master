@@ -1,19 +1,16 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "./index.css";
 
-// Auto-update PWA: when a new SW takes over, reload the page
-registerSW({
-  immediate: true,
-  onNeedRefresh() {
-    window.location.reload();
-  },
-  onOfflineReady() {
-    // no-op
-  },
-});
+// Cleanup any previously registered service workers (PWA was removed).
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((regs) => regs.forEach((r) => r.unregister()))
+    .catch(() => {});
+  caches?.keys?.().then((names) => names.forEach((n) => caches.delete(n))).catch(() => {});
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

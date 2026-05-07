@@ -1,80 +1,34 @@
+## Remover PWA completamente
 
-# Tela Financeiro + Chat IA
+O sistema será apenas web responsivo. Vou remover toda a infraestrutura de PWA (vite-plugin-pwa, service worker, manifest, registro no client) e adicionar um **kill-switch service worker** para desinstalar o SW que já está registrado nos navegadores dos usuários atuais — sem isso, quem já abriu o app continuaria preso ao cache antigo para sempre.
 
-## Resumo
-Nova tela `/financial` com cards de Receita, Despesas e Lucro do mês atual, gráfico mensal e um chat IA que responde perguntas sobre os dados da própria loja (vendas, despesas, produtos, clientes). Acesso controlado por permissão de menu **e** por plano mínimo Prata.
+### Mudanças
 
-## Acesso
-- Menu "Financeiro" aparece no sidebar conforme permissão definida em `Users.tsx` (igual aos demais menus).
-- Bloqueio adicional: empresa precisa ter `plan_tier` = `prata` ou `ouro`. Caso contrário, exibe estado de upgrade ("Disponível nos planos Prata e Ouro") com botão para abrir WhatsApp do super admin (mesmo padrão já usado em Settings).
-- `ProtectedRoute` em `App.tsx` ganha entrada `/financial` no `PATH_TO_MENU_KEY`.
-- `planLimits.ts` ganha `MENU_KEYS.financial` e a checkbox aparece automaticamente em `Users.tsx`.
+**1. Remover registro do PWA**
+- `src/main.tsx`: remover `registerSW` e o import de `virtual:pwa-register`. Adicionar bloco que detecta service workers já registrados e os desinstala + limpa caches (executa só uma vez por sessão).
+- `src/vite-env.d.ts`: remover a linha `/// <reference types="vite-plugin-pwa/client" />`.
 
-## Tela `/financial` (layout Material Design 3, pt-BR, BRL)
+**2. Remover plugin do build**
+- `vite.config.ts`: remover import e bloco `VitePWA(...)` inteiro.
+- `package.json`: remover dependência `vite-plugin-pwa`.
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│ Financeiro · [Seletor: Mês atual ▾]                       │
-├──────────────────────────────────────────────────────────┤
-│ [Receita R$ ...] [Despesas R$ ...] [Lucro R$ ...] [Vendas N] │
-├──────────────────────────────────────────────────────────┤
-│ Gráfico de barras: Receita x Despesas (12 meses)          │
-├──────────────────────────────────────────────────────────┤
-│ Top 5 despesas por categoria  │  Últimas 5 vendas          │
-├──────────────────────────────────────────────────────────┤
-│ 💬 Assistente Financeiro (chat com IA)                    │
-└──────────────────────────────────────────────────────────┘
-```
+**3. Limpar HTML**
+- `index.html`: remover meta tags PWA (`theme-color`, `apple-mobile-web-app-*`, `apple-touch-icon`, `mask-icon`). Manter apenas o `favicon.svg` e meta tags padrão (viewport, OG, Twitter).
 
-- Cards usam dados agregados via Supabase: `sales` (somatório `total` no período, filtrado por `company_id`) e `expenses` (somatório `amount`).
-- Lucro = Receita − Despesas (conforme escolhido).
-- Gráfico com `recharts` (já presente no projeto).
-- Seletor de período: mês atual (default), mês anterior, últimos 3/6/12 meses.
+**4. Kill-switch service worker (essencial)**
+- Criar `public/sw.js` estático que, ao ativar, limpa todos os caches, navega os clientes abertos para forçar reload, e faz `unregister()` de si mesmo. Isso garante que dispositivos que já tinham o SW antigo registrado se livrem dele na próxima visita.
+- Manter este arquivo no projeto por pelo menos 1–2 ciclos de release antes de removê-lo.
 
-## Chat IA — restrito aos dados da loja
+**5. Remover assets PWA**
+- Apagar `public/pwa-192x192.png`, `public/pwa-512x512.png`, `public/apple-touch-icon.png`, `public/mask-icon.svg`.
 
-Componente de chat na própria página (não persistente — histórico só na sessão, sem nova tabela), seguindo padrão markdown + streaming.
+### Resultado esperado
 
-### Edge function `financial-chat`
-- `verify_jwt` padrão (valida token em código), recebe `messages[]` e `companyId`.
-- Resolve `companyId` do usuário autenticado via `get_user_company_id` (ignora qualquer companyId vindo do cliente — evita vazamento entre lojas).
-- Antes de chamar a IA, monta um **snapshot agregado** consultando com `SUPABASE_SERVICE_ROLE_KEY` filtrando SEMPRE por `company_id`:
-  - Vendas por mês (últimos 12 meses): total e quantidade
-  - Despesas por mês e por categoria
-  - Contagem de produtos ativos, estoque total, produtos com estoque baixo (<5)
-  - Quantidade de clientes
-  - Top 5 produtos mais vendidos no período
-- Envia esse snapshot como `system` message para o modelo, com instrução estrita:
-  > "Você é um assistente financeiro. Responda APENAS com base no JSON de dados fornecido desta loja. Nunca invente números. Se a pergunta não puder ser respondida pelos dados, diga que não há informação. Responda em português brasileiro, valores em BRL."
-- Modelo: **`google/gemini-2.5-flash`** (gratuito durante o período promocional do Lovable AI Gateway, rápido e suficiente).
-- Streaming SSE token a token, renderizado com `react-markdown` (já usado no projeto se disponível, senão adicionar).
+- Builds futuros não geram mais `manifest.webmanifest` nem service worker.
+- O proxy do Lovable já serve HTML com `Cache-Control: no-cache`, então mudanças aparecerão imediatamente após o deploy (basta refresh normal).
+- Usuários que já tinham o SW antigo: ao abrir uma vez, o kill-switch limpa tudo e recarrega automaticamente. Da próxima visita em diante, tudo funciona como web app comum.
+- App continua 100% responsivo (Tailwind + layouts atuais).
 
-### Garantias de isolamento
-- Cliente nunca passa dados nem `company_id` para a IA — tudo é resolvido no backend a partir do JWT.
-- Snapshot só contém agregados da empresa do usuário.
-- Prompt do sistema instrui o modelo a recusar perguntas fora do escopo da loja.
+### Observação sobre instalações existentes
 
-## Detalhes técnicos
-
-**Arquivos novos**
-- `src/pages/Financial.tsx` — página principal
-- `src/components/financial/FinancialChat.tsx` — UI do chat com streaming
-- `src/components/financial/FinancialSummaryCards.tsx`
-- `src/components/financial/RevenueExpenseChart.tsx`
-- `supabase/functions/financial-chat/index.ts`
-
-**Arquivos editados**
-- `src/App.tsx` — rota `/financial` protegida + `PATH_TO_MENU_KEY`
-- `src/components/layout/AdminLayout.tsx` — item de menu "Financeiro" (ícone `Wallet`/`TrendingUp`)
-- `src/lib/planLimits.ts` — adicionar `financial` em `MENU_KEYS`
-- `supabase/config.toml` — registrar a função (sem alterar `project_id`)
-
-**Sem migrações de banco** — a tela apenas lê dados existentes; o chat não persiste histórico.
-
-**Dependências** — `react-markdown` se ainda não instalado.
-
-## Validação
-- Testar com usuário de empresa Bronze: ver tela de upgrade.
-- Testar com Prata/Ouro: ver dashboard + chat funcional.
-- Testar pergunta fora do escopo ("clima de SP?") → IA recusa.
-- Testar isolamento: usuário de empresa A não vê dados da empresa B (RLS + filtro server-side na edge function).
+Se algum usuário tinha "Adicionar à tela inicial" instalado, o ícone continuará na tela do celular mas vai abrir como uma aba normal do navegador. Eles precisam remover manualmente se quiserem.

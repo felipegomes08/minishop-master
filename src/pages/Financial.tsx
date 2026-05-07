@@ -212,7 +212,7 @@ export default function Financial() {
     );
   }
 
-  const periodLabel = getRange(period).label;
+  const periodLabel = `${startDate ? format(startDate, 'dd/MM/yyyy') : '—'} a ${endDate ? format(endDate, 'dd/MM/yyyy') : '—'}`;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -221,16 +221,10 @@ export default function Financial() {
           <h1 className="text-3xl font-semibold tracking-tight">Financeiro</h1>
           <p className="text-muted-foreground text-sm">Resumo de receitas, despesas e desempenho da sua loja.</p>
         </div>
-        <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <SelectTrigger className="w-full sm:w-56"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="current">Mês atual</SelectItem>
-            <SelectItem value="previous">Mês anterior</SelectItem>
-            <SelectItem value="3m">Últimos 3 meses</SelectItem>
-            <SelectItem value="6m">Últimos 6 meses</SelectItem>
-            <SelectItem value="12m">Últimos 12 meses</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+          <DateField label="Início" date={startDate} onChange={setStartDate} />
+          <DateField label="Fim" date={endDate} onChange={setEndDate} />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

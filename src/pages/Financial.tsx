@@ -38,7 +38,8 @@ export default function Financial() {
   const { planTier, loading: subLoading } = useSubscription();
   const allowed = planTier === 'prata' || planTier === 'ouro';
 
-  const [period, setPeriod] = useState<Period>('current');
+  const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth());
+  const [endDate, setEndDate] = useState<Date | undefined>(new Date());
   const [loading, setLoading] = useState(true);
   const [revenue, setRevenue] = useState(0);
   const [expenses, setExpenses] = useState(0);

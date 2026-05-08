@@ -502,33 +502,27 @@ export default function Products() {
 
                 <div className="space-y-2">
                   <Label>Preço *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, price: value }))}
                     placeholder="0,00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Preço Promocional</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.promotional_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, promotional_price: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, promotional_price: value }))}
                     placeholder="Deixe vazio se não houver promoção"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Valor de Compra</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.cost_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cost_price: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, cost_price: value }))}
                     placeholder="Valor pago ao fornecedor"
                   />
                 </div>

@@ -874,8 +874,9 @@ export default function Products() {
                         <div className="w-12 h-12 rounded-md overflow-hidden bg-secondary flex items-center justify-center">
                           {product.images && product.images.length > 0 ? (
                             <img
-                              src={product.images[0]}
+                              src={getThumbUrl(product.images[0], 96)}
                               alt={product.name}
+                              loading="lazy"
                               className="w-full h-full object-cover"
                             />
                           ) : (

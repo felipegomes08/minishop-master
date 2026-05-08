@@ -210,11 +210,46 @@ export default function Products() {
       return;
     }
 
+    const remaining = imageLimit - formData.images.length;
+    if (remaining <= 0) {
+      toast({
+        title: `Limite de ${imageLimit} imagens atingido`,
+        description: `Seu plano ${planTier ?? 'atual'} permite até ${imageLimit} imagens por produto. Faça upgrade para adicionar mais.`,
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Apenas imagens (sem vídeos ou outros tipos)
+    const onlyImages = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (onlyImages.length < files.length) {
+      toast({
+        title: 'Apenas imagens são permitidas',
+        description: 'Vídeos e outros formatos foram ignorados.',
+        variant: 'destructive',
+      });
+    }
+
+    let toUpload = onlyImages;
+    if (toUpload.length > remaining) {
+      toUpload = toUpload.slice(0, remaining);
+      toast({
+        title: 'Limite do plano atingido',
+        description: `Apenas ${remaining} imagem(ns) foram adicionadas (limite: ${imageLimit}).`,
+      });
+    }
+
+    if (toUpload.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     const newImages: string[] = [];
 
     try {
-      for (const file of Array.from(files)) {
+      for (const file of toUpload) {
         // Compress image before upload
         const compressedBlob = await compressImage(file);
         const fileName = `${companyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
@@ -241,6 +276,7 @@ export default function Products() {
       toast({ title: 'Erro ao enviar imagens', variant: 'destructive' });
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 

@@ -322,11 +322,9 @@ export function ProductVariantEditor({ productId, basePrice }: ProductVariantEdi
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Ajuste de Preço (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
+              <CurrencyInput
                 value={newVariant.price_adjustment}
-                onChange={e => setNewVariant(prev => ({ ...prev, price_adjustment: e.target.value }))}
+                onChange={value => setNewVariant(prev => ({ ...prev, price_adjustment: value }))}
                 placeholder="0,00"
                 className="h-9"
               />
@@ -407,11 +405,9 @@ export function ProductVariantEditor({ productId, basePrice }: ProductVariantEdi
                   </div>
 
                   {/* Adjustment */}
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={variant.price_adjustment}
-                    onChange={e => updateVariant(variant.id, 'price_adjustment', e.target.value)}
+                  <CurrencyInput
+                    value={String(variant.price_adjustment)}
+                    onChange={e => updateVariant(variant.id, 'price_adjustment', e)}
                     className="w-20 h-8 text-xs"
                   />
 

@@ -425,11 +425,9 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                         />
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={product.unitPrice}
-                          onChange={(e) => updateProduct(index, { unitPrice: parseFloat(e.target.value) || 0 })}
+                        <CurrencyInput
+                          value={String(product.unitPrice)}
+                          onChange={(value) => updateProduct(index, { unitPrice: parseFloat(value) || 0 })}
                           className="h-8 w-20"
                         />
                       </TableCell>

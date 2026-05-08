@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -502,33 +503,27 @@ export default function Products() {
 
                 <div className="space-y-2">
                   <Label>Preço *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, price: value }))}
                     placeholder="0,00"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Preço Promocional</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.promotional_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, promotional_price: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, promotional_price: value }))}
                     placeholder="Deixe vazio se não houver promoção"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Valor de Compra</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={formData.cost_price}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cost_price: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, cost_price: value }))}
                     placeholder="Valor pago ao fornecedor"
                   />
                 </div>
@@ -746,11 +741,9 @@ export default function Products() {
                                 ))}
                               </SelectContent>
                             </Select>
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <CurrencyInput
                               value={editingRow.price}
-                              onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
+                              onChange={(value) => setEditingRow(prev => prev ? { ...prev, price: value } : null)}
                               className="h-8 w-24 text-sm"
                               placeholder="Preço"
                             />
@@ -928,11 +921,9 @@ export default function Products() {
                       </TableCell>
                       <TableCell>
                         {isEditing ? (
-                          <Input
-                            type="number"
-                            step="0.01"
+                          <CurrencyInput
                             value={editingRow.price}
-                            onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
+                            onChange={(value) => setEditingRow(prev => prev ? { ...prev, price: value } : null)}
                             className="h-8"
                           />
                         ) : (

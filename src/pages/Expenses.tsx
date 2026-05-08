@@ -9,6 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -407,7 +408,7 @@ export default function Expenses() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Valor</Label>
-                <Input id="amount" type="number" min="0" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0,00" />
+                <CurrencyInput id="amount" value={form.amount} onChange={(value) => setForm({ ...form, amount: value })} placeholder="0,00" />
               </div>
               <div className="space-y-2">
                 <Label>Data</Label>

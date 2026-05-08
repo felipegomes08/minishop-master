@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -424,11 +425,9 @@ export function ImportFromPhotoDialog({ open, onOpenChange, categories, onSucces
                         />
                       </TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={product.unitPrice}
-                          onChange={(e) => updateProduct(index, { unitPrice: parseFloat(e.target.value) || 0 })}
+                        <CurrencyInput
+                          value={String(product.unitPrice)}
+                          onChange={(value) => updateProduct(index, { unitPrice: parseFloat(value) || 0 })}
                           className="h-8 w-20"
                         />
                       </TableCell>

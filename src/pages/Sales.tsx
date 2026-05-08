@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -632,14 +633,11 @@ export default function Sales() {
                   {/* Desconto Manual */}
                   <div className="space-y-2">
                     <Label className="text-xs">Desconto manual (R$)</Label>
-                    <Input
-                      type="number"
-                      value={manualDiscount || ''}
-                      onChange={(e) => setManualDiscount(parseFloat(e.target.value) || 0)}
+                    <CurrencyInput
+                      value={String(manualDiscount || '')}
+                      onChange={(value) => setManualDiscount(parseFloat(value) || 0)}
                       placeholder="0,00"
                       className="h-9 text-xs"
-                      min="0"
-                      step="0.01"
                     />
                   </div>
 

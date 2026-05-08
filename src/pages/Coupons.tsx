@@ -324,13 +324,10 @@ export default function Coupons() {
                 <div className="space-y-2">
                   <Label>Valor *</Label>
                   <div className="relative">
-                    <Input
-                      type="number"
-                      value={formData.discount_value}
-                      onChange={(e) => setFormData(prev => ({ ...prev, discount_value: parseFloat(e.target.value) || 0 }))}
+                    <CurrencyInput
+                      value={String(formData.discount_value)}
+                      onChange={(value) => setFormData(prev => ({ ...prev, discount_value: parseFloat(value) || 0 }))}
                       className="pl-8"
-                      min="0"
-                      step={formData.discount_type === 'percentage' ? '1' : '0.01'}
                     />
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                       {formData.discount_type === 'percentage' ? '%' : 'R$'}
@@ -342,13 +339,10 @@ export default function Coupons() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Compra Mínima</Label>
-                  <Input
-                    type="number"
-                    value={formData.min_purchase}
-                    onChange={(e) => setFormData(prev => ({ ...prev, min_purchase: parseFloat(e.target.value) || 0 }))}
+                  <CurrencyInput
+                    value={String(formData.min_purchase)}
+                    onChange={(value) => setFormData(prev => ({ ...prev, min_purchase: parseFloat(value) || 0 }))}
                     placeholder="0,00"
-                    min="0"
-                    step="0.01"
                   />
                 </div>
 

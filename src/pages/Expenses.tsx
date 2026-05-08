@@ -407,7 +407,7 @@ export default function Expenses() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="amount">Valor</Label>
-                <Input id="amount" type="number" min="0" step="0.01" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} placeholder="0,00" />
+                <CurrencyInput id="amount" value={form.amount} onChange={(value) => setForm({ ...form, amount: value })} placeholder="0,00" />
               </div>
               <div className="space-y-2">
                 <Label>Data</Label>

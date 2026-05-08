@@ -741,11 +741,9 @@ export default function Products() {
                                 ))}
                               </SelectContent>
                             </Select>
-                            <Input
-                              type="number"
-                              step="0.01"
+                            <CurrencyInput
                               value={editingRow.price}
-                              onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
+                              onChange={(value) => setEditingRow(prev => prev ? { ...prev, price: value } : null)}
                               className="h-8 w-24 text-sm"
                               placeholder="Preço"
                             />
@@ -923,11 +921,9 @@ export default function Products() {
                       </TableCell>
                       <TableCell>
                         {isEditing ? (
-                          <Input
-                            type="number"
-                            step="0.01"
+                          <CurrencyInput
                             value={editingRow.price}
-                            onChange={(e) => setEditingRow(prev => prev ? { ...prev, price: e.target.value } : null)}
+                            onChange={(value) => setEditingRow(prev => prev ? { ...prev, price: value } : null)}
                             className="h-8"
                           />
                         ) : (

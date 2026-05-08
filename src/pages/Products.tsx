@@ -561,13 +561,19 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Imagens</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Imagens</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {formData.images.length} / {imageLimit}
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     {formData.images.map((img, index) => (
                       <div key={index} className="relative group">
-                        <img 
-                          src={img} 
-                          alt="" 
+                        <img
+                          src={getThumbUrl(img, 160)}
+                          alt=""
+                          loading="lazy"
                           className="w-20 h-20 object-cover rounded-lg border border-border"
                         />
                         <button
@@ -579,22 +585,27 @@ export default function Products() {
                         </button>
                       </div>
                     ))}
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-accent transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={uploading}
-                      />
-                      {uploading ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      ) : (
-                        <Upload className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </label>
+                    {formData.images.length < imageLimit && (
+                      <label className="w-20 h-20 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-accent transition-colors">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                        {uploading ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Upload className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </label>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Plano {planTier ?? 'atual'}: até {imageLimit} imagens por produto. Vídeos não são suportados.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-3 md:col-span-2">

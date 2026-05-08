@@ -782,7 +782,7 @@ export default function Products() {
                         onClick={() => startEditingRow(product)}
                       >
                         {product.images && product.images.length > 0 ? (
-                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                          <img src={getThumbUrl(product.images[0], 120)} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon className="w-5 h-5 text-muted-foreground" />
                         )}

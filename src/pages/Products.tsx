@@ -79,6 +79,8 @@ interface EditingRow {
 
 export default function Products() {
   const { companyId } = useCompanyContext();
+  const { planTier } = useSubscription();
+  const imageLimit = getImageLimitForPlan(planTier);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);

@@ -45,6 +45,9 @@ import {
 import { cn } from '@/lib/utils';
 import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
 import { ProductVariantEditor } from '@/components/products/ProductVariantEditor';
+import { useSubscription } from '@/hooks/useSubscription';
+import { getImageLimitForPlan } from '@/lib/planLimits';
+import { getThumbUrl } from '@/lib/imageThumb';
 
 interface Product {
   id: string;

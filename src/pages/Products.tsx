@@ -719,7 +719,7 @@ export default function Products() {
                       <div className="flex gap-3">
                         <div className="w-14 h-14 rounded-md overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
                           {product.images && product.images.length > 0 ? (
-                            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                           <img src={getThumbUrl(product.images[0], 96)} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                           ) : (
                             <ImageIcon className="w-5 h-5 text-muted-foreground" />
                           )}

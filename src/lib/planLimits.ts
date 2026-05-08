@@ -10,6 +10,18 @@ export function getUserLimitForPlan(planTier: string | null | undefined): number
   return PLAN_USER_LIMITS[planTier] ?? 1;
 }
 
+// Limites de imagens por produto, por plano
+export const PLAN_IMAGE_LIMITS: Record<string, number> = {
+  bronze: 3,
+  prata: 6,
+  ouro: 10,
+};
+
+export function getImageLimitForPlan(planTier: string | null | undefined): number {
+  if (!planTier) return 3;
+  return PLAN_IMAGE_LIMITS[planTier] ?? 3;
+}
+
 // Chaves de menu disponíveis para permissão
 export interface MenuKeyDef {
   key: string;

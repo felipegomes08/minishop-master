@@ -45,6 +45,9 @@ import {
 import { cn } from '@/lib/utils';
 import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
 import { ProductVariantEditor } from '@/components/products/ProductVariantEditor';
+import { useSubscription } from '@/hooks/useSubscription';
+import { getImageLimitForPlan } from '@/lib/planLimits';
+import { getThumbUrl } from '@/lib/imageThumb';
 
 interface Product {
   id: string;
@@ -76,6 +79,8 @@ interface EditingRow {
 
 export default function Products() {
   const { companyId } = useCompanyContext();
+  const { planTier } = useSubscription();
+  const imageLimit = getImageLimitForPlan(planTier);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -205,11 +210,46 @@ export default function Products() {
       return;
     }
 
+    const remaining = imageLimit - formData.images.length;
+    if (remaining <= 0) {
+      toast({
+        title: `Limite de ${imageLimit} imagens atingido`,
+        description: `Seu plano ${planTier ?? 'atual'} permite até ${imageLimit} imagens por produto. Faça upgrade para adicionar mais.`,
+        variant: 'destructive',
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Apenas imagens (sem vídeos ou outros tipos)
+    const onlyImages = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (onlyImages.length < files.length) {
+      toast({
+        title: 'Apenas imagens são permitidas',
+        description: 'Vídeos e outros formatos foram ignorados.',
+        variant: 'destructive',
+      });
+    }
+
+    let toUpload = onlyImages;
+    if (toUpload.length > remaining) {
+      toUpload = toUpload.slice(0, remaining);
+      toast({
+        title: 'Limite do plano atingido',
+        description: `Apenas ${remaining} imagem(ns) foram adicionadas (limite: ${imageLimit}).`,
+      });
+    }
+
+    if (toUpload.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
     setUploading(true);
     const newImages: string[] = [];
 
     try {
-      for (const file of Array.from(files)) {
+      for (const file of toUpload) {
         // Compress image before upload
         const compressedBlob = await compressImage(file);
         const fileName = `${companyId}/${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
@@ -236,6 +276,7 @@ export default function Products() {
       toast({ title: 'Erro ao enviar imagens', variant: 'destructive' });
     } finally {
       setUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -520,13 +561,19 @@ export default function Products() {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Imagens</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Imagens</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {formData.images.length} / {imageLimit}
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-3">
                     {formData.images.map((img, index) => (
                       <div key={index} className="relative group">
-                        <img 
-                          src={img} 
-                          alt="" 
+                        <img
+                          src={getThumbUrl(img, 160)}
+                          alt=""
+                          loading="lazy"
                           className="w-20 h-20 object-cover rounded-lg border border-border"
                         />
                         <button
@@ -538,22 +585,27 @@ export default function Products() {
                         </button>
                       </div>
                     ))}
-                    <label className="w-20 h-20 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-accent transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={uploading}
-                      />
-                      {uploading ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                      ) : (
-                        <Upload className="w-5 h-5 text-muted-foreground" />
-                      )}
-                    </label>
+                    {formData.images.length < imageLimit && (
+                      <label className="w-20 h-20 border-2 border-dashed border-border rounded-lg flex items-center justify-center cursor-pointer hover:border-accent transition-colors">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                        {uploading ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Upload className="w-5 h-5 text-muted-foreground" />
+                        )}
+                      </label>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Plano {planTier ?? 'atual'}: até {imageLimit} imagens por produto. Vídeos não são suportados.
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-3 md:col-span-2">
@@ -667,7 +719,7 @@ export default function Products() {
                       <div className="flex gap-3">
                         <div className="w-14 h-14 rounded-md overflow-hidden bg-secondary flex-shrink-0 flex items-center justify-center">
                           {product.images && product.images.length > 0 ? (
-                            <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                           <img src={getThumbUrl(product.images[0], 96)} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                           ) : (
                             <ImageIcon className="w-5 h-5 text-muted-foreground" />
                           )}
@@ -730,7 +782,7 @@ export default function Products() {
                         onClick={() => startEditingRow(product)}
                       >
                         {product.images && product.images.length > 0 ? (
-                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                          <img src={getThumbUrl(product.images[0], 120)} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
                         ) : (
                           <ImageIcon className="w-5 h-5 text-muted-foreground" />
                         )}
@@ -822,8 +874,9 @@ export default function Products() {
                         <div className="w-12 h-12 rounded-md overflow-hidden bg-secondary flex items-center justify-center">
                           {product.images && product.images.length > 0 ? (
                             <img
-                              src={product.images[0]}
+                              src={getThumbUrl(product.images[0], 96)}
                               alt={product.name}
+                              loading="lazy"
                               className="w-full h-full object-cover"
                             />
                           ) : (

@@ -1,34 +1,70 @@
-## Remover PWA completamente
+# Cadastro de produtos: limites por plano e performance da listagem
 
-O sistema será apenas web responsivo. Vou remover toda a infraestrutura de PWA (vite-plugin-pwa, service worker, manifest, registro no client) e adicionar um **kill-switch service worker** para desinstalar o SW que já está registrado nos navegadores dos usuários atuais — sem isso, quem já abriu o app continuaria preso ao cache antigo para sempre.
+## 1. Limite de imagens por plano
 
-### Mudanças
+Adicionar a regra no helper `src/lib/planLimits.ts`:
 
-**1. Remover registro do PWA**
-- `src/main.tsx`: remover `registerSW` e o import de `virtual:pwa-register`. Adicionar bloco que detecta service workers já registrados e os desinstala + limpa caches (executa só uma vez por sessão).
-- `src/vite-env.d.ts`: remover a linha `/// <reference types="vite-plugin-pwa/client" />`.
+```ts
+export const PLAN_IMAGE_LIMITS: Record<string, number> = {
+  bronze: 3,
+  prata: 6,
+  ouro: 10,
+};
+export function getImageLimitForPlan(tier?: string | null): number {
+  return PLAN_IMAGE_LIMITS[tier ?? ''] ?? 3;
+}
+```
 
-**2. Remover plugin do build**
-- `vite.config.ts`: remover import e bloco `VitePWA(...)` inteiro.
-- `package.json`: remover dependência `vite-plugin-pwa`.
+Em `src/pages/Products.tsx`:
+- Ler `planTier` via `useSubscription()` e calcular `imageLimit`.
+- Em `handleImageUpload`:
+  - Calcular `remaining = imageLimit - formData.images.length`.
+  - Se `remaining <= 0`: toast de erro ("Limite de X imagens atingido para o plano <tier>. Faça upgrade para adicionar mais.") e retornar.
+  - Se `files.length > remaining`: cortar para `remaining` e avisar via toast.
+  - Validar `file.type.startsWith('image/')` antes do upload (descartar qualquer arquivo não-imagem, incluindo vídeos) — defesa adicional caso o usuário burle o `accept`.
+- No bloco visual das imagens (linhas 522–557):
+  - Mostrar contador `formData.images.length / imageLimit`.
+  - Esconder o botão `+` quando o limite for atingido.
+  - Adicionar texto pequeno: "Plano <tier>: até N imagens. Vídeos não são suportados."
+- Garantir que `accept="image/*"` permanece e `multiple` continua, mas o input fica `disabled` quando atingido.
 
-**3. Limpar HTML**
-- `index.html`: remover meta tags PWA (`theme-color`, `apple-mobile-web-app-*`, `apple-touch-icon`, `mask-icon`). Manter apenas o `favicon.svg` e meta tags padrão (viewport, OG, Twitter).
+## 2. Bloquear vídeos
 
-**4. Kill-switch service worker (essencial)**
-- Criar `public/sw.js` estático que, ao ativar, limpa todos os caches, navega os clientes abertos para forçar reload, e faz `unregister()` de si mesmo. Isso garante que dispositivos que já tinham o SW antigo registrado se livrem dele na próxima visita.
-- Manter este arquivo no projeto por pelo menos 1–2 ciclos de release antes de removê-lo.
+- Reforçar `accept="image/jpeg,image/png,image/webp,image/gif"` (mais específico que `image/*`, evita seletor mostrar vídeos em alguns browsers).
+- Filtro client-side em `handleImageUpload` (item acima).
+- Não há fluxo de upload de vídeo no projeto hoje — apenas garantir que continue assim.
 
-**5. Remover assets PWA**
-- Apagar `public/pwa-192x192.png`, `public/pwa-512x512.png`, `public/apple-touch-icon.png`, `public/mask-icon.svg`.
+## 3. Performance da listagem
 
-### Resultado esperado
+Estratégia escolhida: **thumbnails via Supabase Storage image transform** (mais simples que virtualização e suficiente para o volume típico).
 
-- Builds futuros não geram mais `manifest.webmanifest` nem service worker.
-- O proxy do Lovable já serve HTML com `Cache-Control: no-cache`, então mudanças aparecerão imediatamente após o deploy (basta refresh normal).
-- Usuários que já tinham o SW antigo: ao abrir uma vez, o kill-switch limpa tudo e recarrega automaticamente. Da próxima visita em diante, tudo funciona como web app comum.
-- App continua 100% responsivo (Tailwind + layouts atuais).
+Criar helper `src/lib/imageThumb.ts`:
 
-### Observação sobre instalações existentes
+```ts
+// Converte uma URL pública do bucket product-images em URL transformada (thumbnail).
+// Ex.: width=120, quality=70.
+export function getThumbUrl(url: string, size = 120): string {
+  if (!url || !url.includes('/storage/v1/object/public/')) return url;
+  return url.replace('/object/public/', '/render/image/public/') + 
+    `?width=${size}&height=${size}&resize=cover&quality=70`;
+}
+```
 
-Se algum usuário tinha "Adicionar à tela inicial" instalado, o ícone continuará na tela do celular mas vai abrir como uma aba normal do navegador. Eles precisam remover manualmente se quiserem.
+Aplicar em `src/pages/Products.tsx`:
+- Card mobile (linha 733): `<img src={getThumbUrl(product.images[0], 120)} loading="lazy" />`
+- Tabela desktop (linha 825): `<img src={getThumbUrl(product.images[0], 96)} loading="lazy" />`
+- Manter imagem original somente no diálogo de edição (linha 527, miniatura 80x80) usando `getThumbUrl(img, 160)`.
+
+Benefícios: payload muito menor por produto na listagem, sem mexer em arquitetura. Se no futuro a lista crescer (>500 itens), aí avaliamos virtualização (`@tanstack/react-virtual`).
+
+## Arquivos afetados
+
+- `src/lib/planLimits.ts` — adicionar `PLAN_IMAGE_LIMITS` e helper.
+- `src/lib/imageThumb.ts` — novo helper.
+- `src/pages/Products.tsx` — limite, validação, UI de contador, thumbnails.
+
+## Não escopo
+
+- Sem mudanças no backend/RLS (limite é por UX; banco não precisa validar pois imagens vivem no array `images` do produto).
+- Sem virtualização agora.
+- Sem alterações em outras telas (catálogo público já usa `loading="lazy"`).

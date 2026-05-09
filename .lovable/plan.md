@@ -1,70 +1,61 @@
-# Cadastro de produtos: limites por plano e performance da listagem
+## O que está acontecendo
 
-## 1. Limite de imagens por plano
+Confirmei o seguinte rodando o site publicado e o preview:
 
-Adicionar a regra no helper `src/lib/planLimits.ts`:
+- **A landing publicada já está na versão nova** (Ouro com "Melhor escolha", preços 97/167/249, Bronze sem cupons/financeiro). O código em `src/components/landing/PricingSection.tsx` está correto.
+- **As telas novas existem no código e estão registradas no menu** (`/expenses`, `/financial`, `/users` em `AdminLayout.tsx`).
+- **Não há mais `vite-plugin-pwa`** no `package.json` nem nada importando service worker no `src/`. Só sobrou referência em `pnpm-lock.yaml`/`package-lock.json` (inofensivo, não é instalado de fato).
+- O servidor publicado responde:
+  - `GET /sw.js` → **200** (kill-switch atual, OK)
+  - `GET /service-worker.js` → **404** (não tem kill-switch nesse caminho)
 
-```ts
-export const PLAN_IMAGE_LIMITS: Record<string, number> = {
-  bronze: 3,
-  prata: 6,
-  ouro: 10,
-};
-export function getImageLimitForPlan(tier?: string | null): number {
-  return PLAN_IMAGE_LIMITS[tier ?? ''] ?? 3;
-}
+Ou seja, o que você está vendo é **cache do navegador no seu dispositivo**, não código antigo no projeto. Existem duas causas combinadas, e vou cobrir as duas:
+
+1. **Service worker fantasma do PWA antigo:** se em algum momento o app registrou SW em `/service-worker.js` (caminho comum do `vite-plugin-pwa`), seu navegador continua servindo o HTML cacheado antigo e o kill-switch atual em `/sw.js` nunca é executado. Sem um kill-switch em `/service-worker.js`, esse SW legado fica preso "para sempre" no seu device.
+2. **Permissões de menu:** se o usuário logado é um funcionário restrito (`user_menu_permissions` com linhas), só aparecem os menus salvos na época da criação. Como Despesas/Financeiro/Usuários são novos, eles ficam escondidos até o dono marcá-los manualmente. Vamos exibir um aviso claro para o dono saber.
+
+## O que vou fazer
+
+### 1. Kill-switch service worker em todos os caminhos comuns
+- Criar `public/service-worker.js` com o mesmo conteúdo de `public/sw.js` (skipWaiting → claim → limpar todos os caches → renavegar clientes com `?sw-cleanup=ts` → `unregister`).
+- Manter `public/sw.js` como já está.
+- Resultado: qualquer device que ainda tenha SW antigo registrado em `/service-worker.js` recebe a versão "auto-destrutiva" no próximo carregamento, limpa o cache e força um reload limpo.
+
+### 2. Reforçar a limpeza no boot do app
+- Em `src/main.tsx`, além do `getRegistrations().unregister()` atual, fazer também:
+  - Se houver qualquer registration ativa, chamar `caches.keys()` + delete em todos.
+  - Após unregister, se detectar que veio de SW (`navigator.serviceWorker.controller`), forçar um `location.reload()` único (com flag em `sessionStorage` para não fazer loop).
+- Isso garante que mesmo quem entrar pela primeira vez depois desta atualização tenha o cache antigo apagado imediatamente.
+
+### 3. Limpeza dos lockfiles
+- Remover `vite-plugin-pwa` e cadeia `workbox-*` que ficaram em `pnpm-lock.yaml` e `package-lock.json` (apenas arquivos de lock; nenhuma alteração de runtime). Mantém o repo coerente com a remoção do PWA.
+
+### 4. Aviso na tela de Usuários para menus novos
+- Em `src/pages/Users.tsx`, ao listar funcionários restritos, se algum deles **não tiver** uma das chaves novas (`expenses`, `financial`, `users`), mostrar um banner: "Há novos menus disponíveis (Despesas, Financeiro, Usuários). Edite o usuário e marque os que ele deve acessar."
+- Isso resolve o caso "fiz login com um funcionário antigo e não aparecem as telas novas".
+
+### 5. Validação
+- Após publicar (você precisa clicar **Publicar → Update** no editor para o frontend ir ao ar), recomendo fazer **hard reload** no seu navegador no domínio publicado: `Ctrl+Shift+R` (Windows) ou `Cmd+Shift+R` (Mac). Em iOS/Android, abrir em aba anônima uma vez para confirmar.
+
+## Detalhes técnicos
+
+```text
+public/
+  sw.js               (já existe - kill-switch)
+  service-worker.js   (NOVO - mesmo conteúdo, cobre o caminho antigo)
+
+src/main.tsx
+  - Mantém unregister + caches.delete
+  - Se controller != null no boot: sessionStorage flag + location.reload() único
 ```
 
-Em `src/pages/Products.tsx`:
-- Ler `planTier` via `useSubscription()` e calcular `imageLimit`.
-- Em `handleImageUpload`:
-  - Calcular `remaining = imageLimit - formData.images.length`.
-  - Se `remaining <= 0`: toast de erro ("Limite de X imagens atingido para o plano <tier>. Faça upgrade para adicionar mais.") e retornar.
-  - Se `files.length > remaining`: cortar para `remaining` e avisar via toast.
-  - Validar `file.type.startsWith('image/')` antes do upload (descartar qualquer arquivo não-imagem, incluindo vídeos) — defesa adicional caso o usuário burle o `accept`.
-- No bloco visual das imagens (linhas 522–557):
-  - Mostrar contador `formData.images.length / imageLimit`.
-  - Esconder o botão `+` quando o limite for atingido.
-  - Adicionar texto pequeno: "Plano <tier>: até N imagens. Vídeos não são suportados."
-- Garantir que `accept="image/*"` permanece e `multiple` continua, mas o input fica `disabled` quando atingido.
+Arquivos tocados:
+- `public/service-worker.js` (novo)
+- `src/main.tsx` (reforço de limpeza)
+- `src/pages/Users.tsx` (aviso de menus novos)
+- `pnpm-lock.yaml`, `package-lock.json` (limpeza de entradas órfãs do PWA)
 
-## 2. Bloquear vídeos
-
-- Reforçar `accept="image/jpeg,image/png,image/webp,image/gif"` (mais específico que `image/*`, evita seletor mostrar vídeos em alguns browsers).
-- Filtro client-side em `handleImageUpload` (item acima).
-- Não há fluxo de upload de vídeo no projeto hoje — apenas garantir que continue assim.
-
-## 3. Performance da listagem
-
-Estratégia escolhida: **thumbnails via Supabase Storage image transform** (mais simples que virtualização e suficiente para o volume típico).
-
-Criar helper `src/lib/imageThumb.ts`:
-
-```ts
-// Converte uma URL pública do bucket product-images em URL transformada (thumbnail).
-// Ex.: width=120, quality=70.
-export function getThumbUrl(url: string, size = 120): string {
-  if (!url || !url.includes('/storage/v1/object/public/')) return url;
-  return url.replace('/object/public/', '/render/image/public/') + 
-    `?width=${size}&height=${size}&resize=cover&quality=70`;
-}
-```
-
-Aplicar em `src/pages/Products.tsx`:
-- Card mobile (linha 733): `<img src={getThumbUrl(product.images[0], 120)} loading="lazy" />`
-- Tabela desktop (linha 825): `<img src={getThumbUrl(product.images[0], 96)} loading="lazy" />`
-- Manter imagem original somente no diálogo de edição (linha 527, miniatura 80x80) usando `getThumbUrl(img, 160)`.
-
-Benefícios: payload muito menor por produto na listagem, sem mexer em arquitetura. Se no futuro a lista crescer (>500 itens), aí avaliamos virtualização (`@tanstack/react-virtual`).
-
-## Arquivos afetados
-
-- `src/lib/planLimits.ts` — adicionar `PLAN_IMAGE_LIMITS` e helper.
-- `src/lib/imageThumb.ts` — novo helper.
-- `src/pages/Products.tsx` — limite, validação, UI de contador, thumbnails.
-
-## Não escopo
-
-- Sem mudanças no backend/RLS (limite é por UX; banco não precisa validar pois imagens vivem no array `images` do produto).
-- Sem virtualização agora.
-- Sem alterações em outras telas (catálogo público já usa `loading="lazy"`).
+## Fora do escopo
+- Não vou mexer no conteúdo da landing (já está correto).
+- Não vou mexer nas telas de Despesas/Financeiro/Usuários em si (já existem).
+- Não vou reintroduzir nada de PWA.

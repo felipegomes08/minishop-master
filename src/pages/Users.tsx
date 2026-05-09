@@ -21,8 +21,10 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users as UsersIcon, Crown, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Users as UsersIcon, Crown, Loader2, AlertCircle } from 'lucide-react';
 import { MENU_KEYS, getUserLimitForPlan } from '@/lib/planLimits';
+
+const NEW_MENU_KEYS = ['expenses', 'financial', 'users'];
 
 interface CompanyUserRow {
   id: string;

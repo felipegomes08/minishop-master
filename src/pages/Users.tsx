@@ -240,6 +240,18 @@ export default function Users() {
         </CardContent>
       </Card>
 
+      {users.some((u) => !u.is_owner && NEW_MENU_KEYS.some((k) => !u.menu_keys.includes(k))) && (
+        <Card className="border-amber-300 bg-amber-50">
+          <CardContent className="flex items-start gap-3 py-4">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-900">
+              <strong>Novos menus disponíveis:</strong> Despesas, Financeiro e Usuários foram adicionados ao sistema.
+              Funcionários criados antes dessa atualização não enxergam essas telas até que você edite o usuário e marque os menus desejados.
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

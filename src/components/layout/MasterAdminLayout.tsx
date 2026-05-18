@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { useScrollFade } from '@/hooks/useScrollFade';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,9 @@ export default function MasterAdminLayout({ children }: MasterAdminLayoutProps) 
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const desktopScroll = useScrollFade<HTMLElement>();
+  const mobileScroll = useScrollFade<HTMLElement>();
 
   const handleNavClick = (path: string) => {
     navigate(path);
@@ -69,26 +73,45 @@ export default function MasterAdminLayout({ children }: MasterAdminLayoutProps) 
           </Button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <button
-                key={item.path}
-                onClick={() => handleNavClick(item.path)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
-                  isActive
-                    ? 'bg-amber-500 text-slate-900'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                )}
-              >
-                <item.icon className="w-5 h-5 shrink-0" />
-                {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex-1 relative overflow-hidden">
+          {/* Fade top — só aparece se há conteúdo acima */}
+          <div
+            className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10 bg-gradient-to-b from-slate-900 to-transparent transition-opacity duration-300"
+            style={{ opacity: desktopScroll.canScrollUp ? 1 : 0 }}
+          />
+          {/* Fade bottom — só aparece se há conteúdo abaixo */}
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 z-10 bg-gradient-to-t from-slate-900 to-transparent transition-opacity duration-300"
+            style={{ opacity: desktopScroll.canScrollDown ? 1 : 0 }}
+          />
+          <nav
+            ref={desktopScroll.ref as React.RefObject<HTMLElement>}
+            className="h-full p-3 space-y-1 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => handleNavClick(item.path)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
+                    isActive
+                      ? 'bg-amber-500 text-slate-900'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  )}
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="p-3 border-t border-slate-700">
           <button
@@ -134,26 +157,45 @@ export default function MasterAdminLayout({ children }: MasterAdminLayoutProps) 
           </Button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <button
-                key={item.path}
-                onClick={() => handleNavClick(item.path)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
-                  isActive
-                    ? 'bg-amber-500 text-slate-900'
-                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                )}
-              >
-                <item.icon className="w-5 h-5 shrink-0" />
-                <span className="text-sm font-medium">{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <div className="flex-1 relative overflow-hidden">
+          {/* Fade top — só aparece se há conteúdo acima */}
+          <div
+            className="pointer-events-none absolute top-0 left-0 right-0 h-8 z-10 bg-gradient-to-b from-slate-900 to-transparent transition-opacity duration-300"
+            style={{ opacity: mobileScroll.canScrollUp ? 1 : 0 }}
+          />
+          {/* Fade bottom — só aparece se há conteúdo abaixo */}
+          <div
+            className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 z-10 bg-gradient-to-t from-slate-900 to-transparent transition-opacity duration-300"
+            style={{ opacity: mobileScroll.canScrollDown ? 1 : 0 }}
+          />
+          <nav
+            ref={mobileScroll.ref as React.RefObject<HTMLElement>}
+            className="h-full p-3 space-y-1 overflow-y-auto"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => handleNavClick(item.path)}
+                  className={cn(
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
+                    isActive
+                      ? 'bg-amber-500 text-slate-900'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  )}
+                >
+                  <item.icon className="w-5 h-5 shrink-0" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
         <div className="p-3 border-t border-slate-700">
           <button

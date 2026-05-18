@@ -275,7 +275,11 @@ export default function Catalog() {
                   className="flex-[0_0_100%] min-w-0"
                 >
                   {banner.link ? (
-                    <a href={banner.link} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={/^https?:\/\//i.test(banner.link) ? banner.link : `https://${banner.link}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <img 
                         src={banner.image_url} 
                         alt={banner.title || 'Banner'} 

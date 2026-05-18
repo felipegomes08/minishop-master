@@ -322,6 +322,7 @@ Poderia me dar mais informações?`;
                   promotionalPrice={relProduct.promotional_price}
                   images={relProduct.images}
                   stock={relProduct.stock}
+                  companySlug={slug}
                 />
               ))}
             </div>

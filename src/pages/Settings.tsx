@@ -56,7 +56,7 @@ interface Banner {
 
 export default function Settings() {
   const { user } = useAuth();
-  const { companyId } = useCompanyContext();
+  const { company, companyId } = useCompanyContext();
   const { planTier, planStatus, subscriptionEnd, isActive } = useSubscription();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -67,6 +67,8 @@ export default function Settings() {
   const [resettingPassword, setResettingPassword] = useState(false);
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
   const [newBannerData, setNewBannerData] = useState({ title: '', link: '' });
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     store_name: '',
@@ -175,9 +177,27 @@ export default function Settings() {
     }
   };
 
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Normaliza URL: garante que links externos tenham protocolo
+  const normalizeUrl = (url: string): string => {
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url)) return url;
+    return `https://${url}`;
+  };
+
+  // Apenas armazena o arquivo localmente e gera preview — não envia ainda
+  const handleBannerFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setBannerFile(file);
+    setBannerPreview(URL.createObjectURL(file));
+  };
+
+  // Faz o upload e salva no banco ao clicar em "Salvar Banner"
+  const handleBannerSave = async () => {
+    if (!bannerFile) {
+      toast({ title: 'Selecione uma imagem para o banner', variant: 'destructive' });
+      return;
+    }
     if (!companyId) {
       toast({ title: 'Empresa não identificada', variant: 'destructive' });
       return;
@@ -185,12 +205,12 @@ export default function Settings() {
 
     setUploadingBanner(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = bannerFile.name.split('.').pop();
       const fileName = `${companyId}/banner-${Date.now()}.${fileExt}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('product-images')
-        .upload(fileName, file);
+        .upload(fileName, bannerFile);
 
       if (uploadError) throw uploadError;
 
@@ -203,7 +223,7 @@ export default function Settings() {
         .insert([{
           image_url: urlData.publicUrl,
           title: newBannerData.title || null,
-          link: newBannerData.link || null,
+          link: newBannerData.link ? normalizeUrl(newBannerData.link) : null,
           sort_order: banners.length,
           is_active: true,
           company_id: companyId
@@ -212,8 +232,11 @@ export default function Settings() {
       if (insertError) throw insertError;
 
       toast({ title: 'Banner adicionado com sucesso' });
+      // Limpa e fecha
       setBannerDialogOpen(false);
       setNewBannerData({ title: '', link: '' });
+      setBannerFile(null);
+      setBannerPreview(null);
       fetchData();
     } catch (error) {
       console.error('Erro ao adicionar banner:', error);
@@ -354,7 +377,8 @@ export default function Settings() {
                   variant="outline" 
                   size="sm"
                   type="button"
-                  onClick={() => window.open('/catalogo', '_blank')}
+                  onClick={() => window.open(`/catalogo/${company?.slug}`, '_blank')}
+                  disabled={!company?.slug}
                 >
                   Ver Catálogo
                 </Button>
@@ -581,7 +605,17 @@ export default function Settings() {
                 <ImagePlus className="w-4 h-4" />
                 Banners do Catálogo
               </h3>
-              <Dialog open={bannerDialogOpen} onOpenChange={setBannerDialogOpen}>
+              <Dialog
+                open={bannerDialogOpen}
+                onOpenChange={(open) => {
+                  setBannerDialogOpen(open);
+                  if (!open) {
+                    setNewBannerData({ title: '', link: '' });
+                    setBannerFile(null);
+                    setBannerPreview(null);
+                  }
+                }}
+              >
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline">
                     Adicionar Banner
@@ -595,46 +629,71 @@ export default function Settings() {
                     <div className="p-4 rounded-lg bg-muted/50 flex items-start gap-2">
                       <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
                       <p className="text-sm text-muted-foreground">
-                        Tamanho recomendado: <strong>1200x400px</strong> (proporção 3:1). 
+                        Tamanho recomendado: <strong>1200x400px</strong> (proporção 3:1).
                         Imagens menores serão esticadas.
                       </p>
                     </div>
+
+                    {/* Imagem do Banner */}
                     <div className="space-y-2">
-                      <Label>Título (opcional)</Label>
-                      <Input
-                        value={newBannerData.title}
-                        onChange={(e) => setNewBannerData(prev => ({ ...prev, title: e.target.value }))}
-                        placeholder="Ex: Promoção de Verão"
-                      />
+                      <Label>Imagem do Banner *</Label>
+                      <label
+                        htmlFor="banner-file-input"
+                        className="cursor-pointer block"
+                      >
+                        {bannerPreview ? (
+                          <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border group">
+                            <img
+                              src={bannerPreview}
+                              alt="Preview do banner"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <span className="text-white text-sm font-medium flex items-center gap-2">
+                                <Upload className="w-4 h-4" />
+                                Trocar imagem
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-full h-32 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 transition-colors">
+                            <Upload className="w-6 h-6 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">Clique para selecionar imagem</span>
+                          </div>
+                        )}
+                        <input
+                          id="banner-file-input"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBannerFileSelect}
+                          className="hidden"
+                        />
+                      </label>
                     </div>
+
                     <div className="space-y-2">
-                      <Label>Link (opcional)</Label>
+                      <Label>Link ao clicar (opcional)</Label>
                       <Input
                         value={newBannerData.link}
                         onChange={(e) => setNewBannerData(prev => ({ ...prev, link: e.target.value }))}
                         placeholder="https://..."
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Imagem do Banner *</Label>
-                      <label className="cursor-pointer block">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleBannerUpload}
-                          className="hidden"
-                          disabled={uploadingBanner}
-                        />
-                        <Button type="button" className="w-full gap-2" disabled={uploadingBanner}>
-                          {uploadingBanner ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Upload className="w-4 h-4" />
-                          )}
-                          {uploadingBanner ? 'Enviando...' : 'Selecionar Imagem'}
-                        </Button>
-                      </label>
-                    </div>
+
+                    {/* Botão Salvar */}
+                    <Button
+                      type="button"
+                      className="w-full gap-2"
+                      onClick={handleBannerSave}
+                      disabled={uploadingBanner || !bannerFile}
+                    >
+                      {uploadingBanner ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      {uploadingBanner ? 'Salvando...' : 'Salvar Banner'}
+                    </Button>
                   </div>
                 </DialogContent>
               </Dialog>

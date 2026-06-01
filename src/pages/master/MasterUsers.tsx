@@ -428,8 +428,9 @@ export default function MasterUsers() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Vinculado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -440,7 +441,8 @@ export default function MasterUsers() {
                   .filter(cu => 
                     cu.company?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     cu.user_id.includes(searchQuery) ||
-                    cu.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                    cu.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    cu.name?.toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .map((cu) => (
                     <TableRow key={cu.id}>
@@ -451,14 +453,19 @@ export default function MasterUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {cu.user_id.slice(0, 8)}...
-                        </code>
+                        <span className="text-sm font-medium text-foreground">
+                          {cu.name ?? '—'}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-foreground">
                           {cu.email ?? '—'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {cu.user_id.slice(0, 8)}…
+                        </code>
                       </TableCell>
                       <TableCell>
                         <Badge variant={cu.role === 'admin' ? 'default' : 'secondary'}>

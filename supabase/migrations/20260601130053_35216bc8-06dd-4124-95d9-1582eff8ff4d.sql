@@ -1,0 +1,19 @@
+CREATE OR REPLACE FUNCTION public.get_user_emails_superadmin(user_ids uuid[])
+RETURNS TABLE(user_id uuid, email text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_super_admin(auth.uid()) THEN
+    RAISE EXCEPTION 'Acesso negado';
+  END IF;
+
+  RETURN QUERY
+  SELECT u.id, u.email::text
+  FROM auth.users u
+  WHERE u.id = ANY(user_ids);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_user_emails_superadmin(uuid[]) TO authenticated;

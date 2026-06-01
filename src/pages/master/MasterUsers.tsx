@@ -134,7 +134,7 @@ export default function MasterUsers() {
           }
           if (authUsers && Array.isArray(authUsers)) {
             userEmails = (authUsers as Array<any>).reduce((acc: Record<string, string | null>, u: any) => {
-              acc[u.id] = u.email;
+              acc[u.user_id ?? u.id] = u.email;
               return acc;
             }, {});
           }

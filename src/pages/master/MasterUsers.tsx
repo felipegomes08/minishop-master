@@ -313,8 +313,9 @@ export default function MasterUsers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Adicionado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -324,14 +325,19 @@ export default function MasterUsers() {
                 {masterAdmins.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell>
-                      <code className="text-sm bg-muted px-2 py-1 rounded">
-                        {admin.user_id}
-                      </code>
+                      <span className="text-sm font-medium text-foreground">
+                        {admin.name ?? '—'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-foreground">
                         {admin.email ?? '—'}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {admin.user_id.slice(0, 8)}…
+                      </code>
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-amber-500">

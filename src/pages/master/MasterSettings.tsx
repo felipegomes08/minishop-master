@@ -41,7 +41,7 @@ export default function MasterSettings() {
     }
 
     toast({ title: 'Número de suporte atualizado', description: 'O WhatsApp de suporte global foi salvo com sucesso.' });
-    setSupportNumber(data?.whatsapp_number ?? '');
+    setSupportNumber((data as any)?.whatsapp_number ?? '');
   };
 
   return (

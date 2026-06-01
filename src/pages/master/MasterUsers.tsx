@@ -57,6 +57,7 @@ interface CompanyUser {
   company_id: string;
   user_id: string;
   email?: string | null;
+  name?: string | null;
   role: string;
   created_at: string;
   company?: Company;
@@ -66,6 +67,7 @@ interface MasterAdmin {
   id: string;
   user_id: string;
   email?: string | null;
+  name?: string | null;
   role: string;
   created_at: string;
 }

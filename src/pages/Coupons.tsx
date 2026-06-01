@@ -1,34 +1,35 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useCompanyContext } from '@/hooks/useCompanyContext';
-import { useSubscription } from '@/hooks/useSubscription';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Ticket,
-  Percent,
-  DollarSign,
-  Loader2,
+import {
   Calendar,
   Crown,
+  DollarSign,
+  Edit2,
+  Loader2,
   MessageCircle,
+  Percent,
+  Plus,
+  Search,
+  Ticket,
+  Trash2,
 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
 
 interface Coupon {
   id: string;
@@ -47,8 +48,10 @@ interface Coupon {
 
 export default function Coupons() {
   const { companyId } = useCompanyContext();
+  const { storeSettings } = useStoreSettings();
   const { planTier, loading: subLoading } = useSubscription();
   const allowed = planTier === 'prata' || planTier === 'ouro';
+  const supportWhatsApp = storeSettings?.whatsapp_number || '5519996688116';
 
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -258,7 +261,7 @@ export default function Coupons() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={() => window.open(`https://wa.me/5519996688116?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar os Cupons.')}`, '_blank')}>
+            <Button onClick={() => window.open(`https://wa.me/${supportWhatsApp}?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar os Cupons.')}`, '_blank')}>
               <MessageCircle className="w-4 h-4 mr-2" /> Falar com o suporte
             </Button>
           </CardContent>

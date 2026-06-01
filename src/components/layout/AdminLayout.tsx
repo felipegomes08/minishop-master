@@ -1,28 +1,29 @@
-import { ReactNode, useState } from 'react';
-import { useScrollFade } from '@/hooks/useScrollFade';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { useScrollFade } from '@/hooks/useScrollFade';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import {
-  LayoutDashboard,
-  Package,
-  FolderTree,
-  Users,
-  ShoppingCart,
-  ReceiptText,
-  Settings,
-  LogOut,
-  Menu,
-  X,
-  ChevronLeft,
-  Store,
-  Ticket,
-  Sliders,
-  UserCog,
-  Wallet,
+    ChevronLeft,
+    FolderTree,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Package,
+    ReceiptText,
+    Settings,
+    ShoppingCart,
+    Sliders,
+    Store,
+    Ticket,
+    UserCog,
+    Users,
+    Wallet,
+    X,
 } from 'lucide-react';
+import { ReactNode, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -46,6 +47,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { signOut } = useAuth();
+  const { company } = useCompanyContext();
   const { allowedMenus, isRestricted } = useUserPermissions();
   const navigate = useNavigate();
   const location = useLocation();
@@ -79,10 +81,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
           {sidebarOpen && (
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
-                <Store className="w-5 h-5 text-sidebar-primary-foreground" />
+              <div className="w-10 h-10 overflow-hidden rounded-xl bg-sidebar-primary flex items-center justify-center">
+                {company?.logo_url ? (
+                  <img
+                    src={company.logo_url}
+                    alt={company.name ?? 'Logo da empresa'}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <Store className="w-5 h-5 text-sidebar-primary-foreground" />
+                )}
               </div>
-              <span className="font-semibold text-sidebar-foreground">Admin</span>
+              <span className="font-semibold text-sidebar-foreground">{company?.name ?? 'Admin'}</span>
             </div>
           )}
           <Button
@@ -166,10 +176,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       >
         <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sidebar-primary flex items-center justify-center">
-              <Store className="w-5 h-5 text-sidebar-primary-foreground" />
+            <div className="w-10 h-10 overflow-hidden rounded-xl bg-sidebar-primary flex items-center justify-center">
+              {company?.logo_url ? (
+                <img
+                  src={company.logo_url}
+                  alt={company.name ?? 'Logo da empresa'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Store className="w-5 h-5 text-sidebar-primary-foreground" />
+              )}
             </div>
-            <span className="font-semibold text-sidebar-foreground">Admin</span>
+            <span className="font-semibold text-sidebar-foreground">{company?.name ?? 'Admin'}</span>
           </div>
           <Button
             variant="ghost"
@@ -244,10 +262,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <Menu className="w-5 h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Store className="w-4 h-4 text-primary-foreground" />
+            <div className="w-8 h-8 overflow-hidden rounded-lg bg-primary flex items-center justify-center">
+              {company?.logo_url ? (
+                <img
+                  src={company.logo_url}
+                  alt={company.name ?? 'Logo da empresa'}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Store className="w-4 h-4 text-primary-foreground" />
+              )}
             </div>
-            <span className="font-semibold">Admin</span>
+            <span className="font-semibold">{company?.name ?? 'Admin'}</span>
           </div>
           <div className="w-10" />
         </header>

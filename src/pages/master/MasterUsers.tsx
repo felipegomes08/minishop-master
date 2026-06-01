@@ -1,45 +1,45 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { Building2, Plus, Search, Shield, Trash2, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Search, Trash2, Users, Building2, Shield } from 'lucide-react';
 
 interface Company {
   id: string;
@@ -47,10 +47,16 @@ interface Company {
   slug: string;
 }
 
+interface AuthUser {
+  id: string;
+  email: string | null;
+}
+
 interface CompanyUser {
   id: string;
   company_id: string;
   user_id: string;
+  email?: string | null;
   role: string;
   created_at: string;
   company?: Company;
@@ -59,6 +65,7 @@ interface CompanyUser {
 interface MasterAdmin {
   id: string;
   user_id: string;
+  email?: string | null;
   role: string;
   created_at: string;
 }
@@ -103,21 +110,53 @@ export default function MasterUsers() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      // Add company info to each user
-      const usersWithCompany = (companyUsersData || []).map(cu => ({
-        ...cu,
-        company: companiesData?.find(c => c.id === cu.company_id)
-      }));
-
-      setCompanyUsers(usersWithCompany);
-
       // Fetch master admins
       const { data: masterAdminsData } = await supabase
         .from('master_admins')
         .select('*')
         .order('created_at', { ascending: false });
 
-      setMasterAdmins(masterAdminsData || []);
+      const allUserIds = Array.from(
+        new Set([
+          ...(companyUsersData?.map((cu: any) => cu.user_id) || []),
+          ...(masterAdminsData?.map((ma: any) => ma.user_id) || []),
+        ]),
+      );
+
+      let userEmails: Record<string, string | null> = {};
+      if (allUserIds.length > 0) {
+        // Use safe RPC that runs as SECURITY DEFINER to fetch emails from auth.users
+        // This requires the DB migration/function `get_user_emails(uuid[])` to exist.
+        try {
+          const { data: authUsers, error: rpcErr } = await supabase.rpc('get_user_emails_superadmin', { user_ids: allUserIds });
+          if (rpcErr) {
+            console.warn('RPC get_user_emails returned error:', rpcErr);
+          }
+          if (authUsers && Array.isArray(authUsers)) {
+            userEmails = (authUsers as Array<any>).reduce((acc: Record<string, string | null>, u: any) => {
+              acc[u.id] = u.email;
+              return acc;
+            }, {});
+          }
+        } catch (e) {
+          console.warn('Erro ao chamar RPC get_user_emails:', e);
+        }
+      }
+
+      // Add company info and email to each user
+      const usersWithCompany = (companyUsersData || []).map((cu: any) => ({
+        ...cu,
+        email: userEmails[cu.user_id] ?? null,
+        company: companiesData?.find(c => c.id === cu.company_id),
+      }));
+
+      setCompanyUsers(usersWithCompany);
+      setMasterAdmins(
+        (masterAdminsData || []).map((ma: any) => ({
+          ...ma,
+          email: userEmails[ma.user_id] ?? null,
+        })),
+      );
     } catch (error) {
       console.error('Erro ao buscar dados:', error);
       toast.error('Erro ao carregar dados');
@@ -272,6 +311,7 @@ export default function MasterUsers() {
               <TableHeader>
                 <TableRow>
                   <TableHead>User ID</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Adicionado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -284,6 +324,11 @@ export default function MasterUsers() {
                       <code className="text-sm bg-muted px-2 py-1 rounded">
                         {admin.user_id}
                       </code>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-foreground">
+                        {admin.email ?? '—'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-amber-500">
@@ -375,6 +420,7 @@ export default function MasterUsers() {
                 <TableRow>
                   <TableHead>Empresa</TableHead>
                   <TableHead>User ID</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Vinculado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -384,7 +430,8 @@ export default function MasterUsers() {
                 {companyUsers
                   .filter(cu => 
                     cu.company?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    cu.user_id.includes(searchQuery)
+                    cu.user_id.includes(searchQuery) ||
+                    cu.email?.toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .map((cu) => (
                     <TableRow key={cu.id}>
@@ -398,6 +445,11 @@ export default function MasterUsers() {
                         <code className="text-sm bg-muted px-2 py-1 rounded">
                           {cu.user_id.slice(0, 8)}...
                         </code>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-foreground">
+                          {cu.email ?? '—'}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <Badge variant={cu.role === 'admin' ? 'default' : 'secondary'}>

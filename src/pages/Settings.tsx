@@ -1,34 +1,33 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
-import { useCompanyContext } from '@/hooks/useCompanyContext';
-import { useSubscription } from '@/hooks/useSubscription';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { 
-  Store,
-  Upload,
+import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Crown,
+  ExternalLink,
+  GripVertical,
+  HelpCircle,
+  ImagePlus,
+  Info,
+  KeyRound,
   Loader2,
+  MessageCircle,
   Palette,
   Phone,
-  ExternalLink,
-  KeyRound,
-  ImagePlus,
+  Store,
   Trash2,
-  GripVertical,
-  Info,
-  Crown,
-  HelpCircle,
-  MessageCircle
+  Upload
 } from 'lucide-react';
-
-const SUPPORT_WHATSAPP = '5519996688116';
+import { useEffect, useState } from 'react';
 
 const PLAN_LABELS: Record<string, { label: string; color: string }> = {
   bronze: { label: 'Bronze', color: 'bg-amber-700 text-white' },
@@ -57,6 +56,7 @@ interface Banner {
 export default function Settings() {
   const { user } = useAuth();
   const { company, companyId } = useCompanyContext();
+  const { storeSettings } = useStoreSettings();
   const { planTier, planStatus, subscriptionEnd, isActive } = useSubscription();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -568,7 +568,8 @@ export default function Settings() {
                   const msg = encodeURIComponent(
                     `Olá! Sou da loja "${formData.store_name || 'minha empresa'}" e gostaria de ajuda com meu plano.`
                   );
-                  window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${msg}`, '_blank');
+                  const supportNumber = storeSettings?.whatsapp_number;
+                  window.open(`https://wa.me/${supportNumber}?text=${msg}`, '_blank');
                 }}
               >
                 <MessageCircle className="w-4 h-4" />

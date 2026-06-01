@@ -1,24 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useCompanyContext } from '@/hooks/useCompanyContext';
-import { useSubscription } from '@/hooks/useSubscription';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  TrendingUp, TrendingDown, Wallet, ShoppingBag, Crown, MessageCircle, Send, Sparkles, Loader2, CalendarIcon,
-} from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import ReactMarkdown from 'react-markdown';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { useStoreSettings } from '@/hooks/useStoreSettings';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
-
-const SUPPORT_WHATSAPP = '5519996688116';
+import {
+    CalendarIcon,
+    Crown,
+    Loader2,
+    MessageCircle, Send,
+    ShoppingBag,
+    Sparkles,
+    TrendingDown,
+    TrendingUp,
+    Wallet,
+} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 function brl(v: number) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
@@ -35,8 +42,10 @@ interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
 export default function Financial() {
   const { companyId, loading: companyLoading } = useCompanyContext();
+  const { storeSettings } = useStoreSettings();
   const { planTier, loading: subLoading } = useSubscription();
   const allowed = planTier === 'prata' || planTier === 'ouro';
+  const supportWhatsApp = storeSettings?.whatsapp_number || '5519996688116';
 
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
@@ -203,7 +212,7 @@ export default function Financial() {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Button onClick={() => window.open(`https://wa.me/${SUPPORT_WHATSAPP}?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar o Financeiro.')}`, '_blank')}>
+            <Button onClick={() => window.open(`https://wa.me/${supportWhatsApp}?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar o Financeiro.')}`, '_blank')}>
               <MessageCircle className="w-4 h-4 mr-2" /> Falar com o suporte
             </Button>
           </CardContent>

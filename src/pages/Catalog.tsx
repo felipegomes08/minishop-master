@@ -1,19 +1,19 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { CatalogFooter } from "@/components/catalog/CatalogFooter";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import {
+  CatalogHeaderSkeleton,
+  CategoryNavSkeleton,
+  ProductGridSkeleton
+} from "@/components/catalog/CatalogSkeleton";
 import { CategoryNav } from "@/components/catalog/CategoryNav";
 import { ProductCard } from "@/components/catalog/ProductCard";
 import { WhatsAppButton } from "@/components/catalog/WhatsAppButton";
-import { CatalogFooter } from "@/components/catalog/CatalogFooter";
-import { 
-  CatalogHeaderSkeleton, 
-  CategoryNavSkeleton, 
-  ProductGridSkeleton 
-} from "@/components/catalog/CatalogSkeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, ShoppingBag, ChevronLeft, ChevronRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import useEmblaCarousel from "embla-carousel-react";
+import { ChevronLeft, ChevronRight, Package, ShoppingBag } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
 
 interface ProductVariant {
   id: string;
@@ -199,10 +199,12 @@ export default function Catalog() {
     return result;
   };
 
+  const isSearching = searchQuery.trim().length > 0;
+
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    if (searchQuery.trim()) {
+    if (isSearching) {
       const query = searchQuery.toLowerCase();
       result = result.filter(product => 
         product.name.toLowerCase().includes(query) ||
@@ -265,8 +267,9 @@ export default function Catalog() {
       />
 
       {/* Banner Carousel ou Hero padrão */}
-      {banners.length > 0 ? (
-        <div className="relative w-full">
+      {!isSearching && (
+        banners.length > 0 ? (
+          <div className="relative w-full">
           <div className="overflow-hidden" ref={emblaRef}>
             <div className="flex">
               {banners.map((banner) => (
@@ -350,7 +353,7 @@ export default function Catalog() {
             </p>
           </div>
         </div>
-      )}
+      ))}
 
       <main className="container mx-auto px-4 py-6 space-y-6 flex-1">
         {categories.length > 0 && (

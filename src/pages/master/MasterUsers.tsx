@@ -124,29 +124,29 @@ export default function MasterUsers() {
       );
 
       let userEmails: Record<string, string | null> = {};
+      let userNames: Record<string, string | null> = {};
       if (allUserIds.length > 0) {
-        // Use safe RPC that runs as SECURITY DEFINER to fetch emails from auth.users
-        // This requires the DB migration/function `get_user_emails(uuid[])` to exist.
         try {
           const { data: authUsers, error: rpcErr } = await supabase.rpc('get_user_emails_superadmin', { user_ids: allUserIds });
           if (rpcErr) {
-            console.warn('RPC get_user_emails returned error:', rpcErr);
+            console.warn('RPC get_user_emails_superadmin error:', rpcErr);
           }
           if (authUsers && Array.isArray(authUsers)) {
-            userEmails = (authUsers as Array<any>).reduce((acc: Record<string, string | null>, u: any) => {
-              acc[u.user_id ?? u.id] = u.email;
-              return acc;
-            }, {});
+            (authUsers as Array<any>).forEach((u: any) => {
+              const id = u.user_id ?? u.id;
+              userEmails[id] = u.email ?? null;
+              userNames[id] = u.name ?? null;
+            });
           }
         } catch (e) {
-          console.warn('Erro ao chamar RPC get_user_emails:', e);
+          console.warn('Erro ao chamar RPC get_user_emails_superadmin:', e);
         }
       }
 
-      // Add company info and email to each user
       const usersWithCompany = (companyUsersData || []).map((cu: any) => ({
         ...cu,
         email: userEmails[cu.user_id] ?? null,
+        name: userNames[cu.user_id] ?? null,
         company: companiesData?.find(c => c.id === cu.company_id),
       }));
 
@@ -155,6 +155,7 @@ export default function MasterUsers() {
         (masterAdminsData || []).map((ma: any) => ({
           ...ma,
           email: userEmails[ma.user_id] ?? null,
+          name: userNames[ma.user_id] ?? null,
         })),
       );
     } catch (error) {

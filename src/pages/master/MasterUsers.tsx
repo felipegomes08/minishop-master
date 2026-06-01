@@ -57,6 +57,7 @@ interface CompanyUser {
   company_id: string;
   user_id: string;
   email?: string | null;
+  name?: string | null;
   role: string;
   created_at: string;
   company?: Company;
@@ -66,6 +67,7 @@ interface MasterAdmin {
   id: string;
   user_id: string;
   email?: string | null;
+  name?: string | null;
   role: string;
   created_at: string;
 }
@@ -124,29 +126,29 @@ export default function MasterUsers() {
       );
 
       let userEmails: Record<string, string | null> = {};
+      let userNames: Record<string, string | null> = {};
       if (allUserIds.length > 0) {
-        // Use safe RPC that runs as SECURITY DEFINER to fetch emails from auth.users
-        // This requires the DB migration/function `get_user_emails(uuid[])` to exist.
         try {
           const { data: authUsers, error: rpcErr } = await supabase.rpc('get_user_emails_superadmin', { user_ids: allUserIds });
           if (rpcErr) {
-            console.warn('RPC get_user_emails returned error:', rpcErr);
+            console.warn('RPC get_user_emails_superadmin error:', rpcErr);
           }
           if (authUsers && Array.isArray(authUsers)) {
-            userEmails = (authUsers as Array<any>).reduce((acc: Record<string, string | null>, u: any) => {
-              acc[u.id] = u.email;
-              return acc;
-            }, {});
+            (authUsers as Array<any>).forEach((u: any) => {
+              const id = u.user_id ?? u.id;
+              userEmails[id] = u.email ?? null;
+              userNames[id] = u.name ?? null;
+            });
           }
         } catch (e) {
-          console.warn('Erro ao chamar RPC get_user_emails:', e);
+          console.warn('Erro ao chamar RPC get_user_emails_superadmin:', e);
         }
       }
 
-      // Add company info and email to each user
       const usersWithCompany = (companyUsersData || []).map((cu: any) => ({
         ...cu,
         email: userEmails[cu.user_id] ?? null,
+        name: userNames[cu.user_id] ?? null,
         company: companiesData?.find(c => c.id === cu.company_id),
       }));
 
@@ -155,6 +157,7 @@ export default function MasterUsers() {
         (masterAdminsData || []).map((ma: any) => ({
           ...ma,
           email: userEmails[ma.user_id] ?? null,
+          name: userNames[ma.user_id] ?? null,
         })),
       );
     } catch (error) {
@@ -310,8 +313,9 @@ export default function MasterUsers() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Adicionado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -321,14 +325,19 @@ export default function MasterUsers() {
                 {masterAdmins.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell>
-                      <code className="text-sm bg-muted px-2 py-1 rounded">
-                        {admin.user_id}
-                      </code>
+                      <span className="text-sm font-medium text-foreground">
+                        {admin.name ?? '—'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-foreground">
                         {admin.email ?? '—'}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">
+                        {admin.user_id.slice(0, 8)}…
+                      </code>
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-amber-500">
@@ -419,8 +428,9 @@ export default function MasterUsers() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>User ID</TableHead>
+                  <TableHead>Nome</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>User ID</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Vinculado em</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -431,7 +441,8 @@ export default function MasterUsers() {
                   .filter(cu => 
                     cu.company?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                     cu.user_id.includes(searchQuery) ||
-                    cu.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                    cu.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    cu.name?.toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .map((cu) => (
                     <TableRow key={cu.id}>
@@ -442,14 +453,19 @@ export default function MasterUsers() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {cu.user_id.slice(0, 8)}...
-                        </code>
+                        <span className="text-sm font-medium text-foreground">
+                          {cu.name ?? '—'}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-foreground">
                           {cu.email ?? '—'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {cu.user_id.slice(0, 8)}…
+                        </code>
                       </TableCell>
                       <TableCell>
                         <Badge variant={cu.role === 'admin' ? 'default' : 'secondary'}>

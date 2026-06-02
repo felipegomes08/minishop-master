@@ -89,13 +89,27 @@ export default function Users() {
         permMap.set(p.user_id, arr);
       });
 
+      const emailMap = new Map<string, { email: string | null; name: string | null }>();
+      if (userIds.length) {
+        const { data: emails } = await supabase.rpc('get_company_user_emails', {
+          _company_id: companyId,
+          user_ids: userIds,
+        });
+        (emails ?? []).forEach((e: any) => {
+          emailMap.set(e.user_id, { email: e.email ?? null, name: e.name ?? null });
+        });
+      }
+
       const rows: CompanyUserRow[] = (members ?? []).map((m) => {
         const mk = permMap.get(m.user_id) ?? [];
+        const info = emailMap.get(m.user_id);
         return {
           id: m.id,
           user_id: m.user_id,
           role: m.role,
           created_at: m.created_at,
+          email: info?.email ?? null,
+          name: info?.name ?? null,
           is_owner: mk.length === 0, // sem entradas = dono
           menu_keys: mk,
         };

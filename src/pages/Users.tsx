@@ -188,6 +188,63 @@ export default function Users() {
     }
   }
 
+  function openEdit(u: CompanyUserRow) {
+    setEditTarget(u);
+    setEditForm({
+      name: u.name ?? '',
+      email: u.email ?? '',
+      password: '',
+      menus: new Set<string>(u.is_owner ? ['dashboard'] : [...u.menu_keys, 'dashboard']),
+    });
+  }
+
+  function toggleEditMenu(key: string, checked: boolean) {
+    const next = new Set(editForm.menus);
+    if (checked) next.add(key);
+    else next.delete(key);
+    next.add('dashboard');
+    setEditForm({ ...editForm, menus: next });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      toast.error('Nome e e-mail são obrigatórios');
+      return;
+    }
+    if (editForm.password && editForm.password.length < 8) {
+      toast.error('Senha deve ter no mínimo 8 caracteres');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const body: Record<string, unknown> = {
+        target_user_id: editTarget.user_id,
+        name: editForm.name.trim(),
+        email: editForm.email.trim().toLowerCase(),
+      };
+      if (editForm.password) body.password = editForm.password;
+      if (!editTarget.is_owner) body.menu_keys = Array.from(editForm.menus);
+
+      const { data, error } = await supabase.functions.invoke('update-company-user', {
+        body,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Usuário atualizado');
+      setEditTarget(null);
+      fetchUsers();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao atualizar usuário');
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);

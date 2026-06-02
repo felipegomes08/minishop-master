@@ -527,6 +527,84 @@ export default function Users() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog editar */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar usuário</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do funcionário. Deixe a senha em branco para mantê-la.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nome *</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">E-mail *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Nova senha (opcional, mín. 8 caracteres)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                minLength={8}
+                placeholder="Deixe em branco para manter"
+              />
+            </div>
+            {editTarget && !editTarget.is_owner && (
+              <div className="space-y-2">
+                <Label>Telas permitidas</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg">
+                  {MENU_KEYS.map((m) => {
+                    const checked = editForm.menus.has(m.key);
+                    const disabled = m.alwaysOn;
+                    return (
+                      <label
+                        key={m.key}
+                        className="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          disabled={disabled}
+                          onCheckedChange={(v) => toggleEditMenu(m.key, !!v)}
+                        />
+                        <span className={disabled ? 'text-muted-foreground' : ''}>
+                          {m.label}{disabled && ' (sempre)'}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editSaving}>
+                {editSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando…</> : 'Salvar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

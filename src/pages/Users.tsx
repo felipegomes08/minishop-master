@@ -48,6 +48,14 @@ export default function Users() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CompanyUserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editTarget, setEditTarget] = useState<CompanyUserRow | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    menus: new Set<string>(['dashboard']),
+  });
 
   const [formData, setFormData] = useState({
     name: '',

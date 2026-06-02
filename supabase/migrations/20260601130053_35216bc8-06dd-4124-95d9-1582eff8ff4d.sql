@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS public.get_user_emails_superadmin(uuid[]);
+
 CREATE OR REPLACE FUNCTION public.get_user_emails_superadmin(user_ids uuid[])
 RETURNS TABLE(user_id uuid, email text)
 LANGUAGE plpgsql

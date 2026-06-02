@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import { Plus, Trash2, Users as UsersIcon, Crown, Loader2, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Pencil, Users as UsersIcon, Crown, Loader2, AlertCircle } from 'lucide-react';
 import { MENU_KEYS, getUserLimitForPlan } from '@/lib/planLimits';
 
 const NEW_MENU_KEYS = ['expenses', 'financial', 'users'];
@@ -48,6 +48,14 @@ export default function Users() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<CompanyUserRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editTarget, setEditTarget] = useState<CompanyUserRow | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    menus: new Set<string>(['dashboard']),
+  });
 
   const [formData, setFormData] = useState({
     name: '',
@@ -177,6 +185,63 @@ export default function Users() {
       toast.error(e?.message ?? 'Erro ao criar usuário');
     } finally {
       setSaving(false);
+    }
+  }
+
+  function openEdit(u: CompanyUserRow) {
+    setEditTarget(u);
+    setEditForm({
+      name: u.name ?? '',
+      email: u.email ?? '',
+      password: '',
+      menus: new Set<string>(u.is_owner ? ['dashboard'] : [...u.menu_keys, 'dashboard']),
+    });
+  }
+
+  function toggleEditMenu(key: string, checked: boolean) {
+    const next = new Set(editForm.menus);
+    if (checked) next.add(key);
+    else next.delete(key);
+    next.add('dashboard');
+    setEditForm({ ...editForm, menus: next });
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    if (!editForm.name.trim() || !editForm.email.trim()) {
+      toast.error('Nome e e-mail são obrigatórios');
+      return;
+    }
+    if (editForm.password && editForm.password.length < 8) {
+      toast.error('Senha deve ter no mínimo 8 caracteres');
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const body: Record<string, unknown> = {
+        target_user_id: editTarget.user_id,
+        name: editForm.name.trim(),
+        email: editForm.email.trim().toLowerCase(),
+      };
+      if (editForm.password) body.password = editForm.password;
+      if (!editTarget.is_owner) body.menu_keys = Array.from(editForm.menus);
+
+      const { data, error } = await supabase.functions.invoke('update-company-user', {
+        body,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success('Usuário atualizado');
+      setEditTarget(null);
+      fetchUsers();
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Erro ao atualizar usuário');
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -333,16 +398,29 @@ export default function Users() {
                       {new Date(u.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
-                      {!u.is_owner && u.user_id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(u)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <div className="flex justify-end gap-1">
+                        {u.user_id !== user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(u)}
+                            title="Editar"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!u.is_owner && u.user_id !== user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget(u)}
+                            className="text-destructive hover:text-destructive"
+                            title="Remover"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -449,6 +527,84 @@ export default function Users() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog editar */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar usuário</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do funcionário. Deixe a senha em branco para mantê-la.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Nome *</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">E-mail *</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">Nova senha (opcional, mín. 8 caracteres)</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={editForm.password}
+                onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                minLength={8}
+                placeholder="Deixe em branco para manter"
+              />
+            </div>
+            {editTarget && !editTarget.is_owner && (
+              <div className="space-y-2">
+                <Label>Telas permitidas</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-lg">
+                  {MENU_KEYS.map((m) => {
+                    const checked = editForm.menus.has(m.key);
+                    const disabled = m.alwaysOn;
+                    return (
+                      <label
+                        key={m.key}
+                        className="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          disabled={disabled}
+                          onCheckedChange={(v) => toggleEditMenu(m.key, !!v)}
+                        />
+                        <span className={disabled ? 'text-muted-foreground' : ''}>
+                          {m.label}{disabled && ' (sempre)'}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditTarget(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={editSaving}>
+                {editSaving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando…</> : 'Salvar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

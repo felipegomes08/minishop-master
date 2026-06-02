@@ -8,24 +8,22 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import {
-    Crown,
-    ExternalLink,
-    GripVertical,
-    HelpCircle,
-    ImagePlus,
-    Info,
-    KeyRound,
-    Loader2,
-    MessageCircle,
-    Palette,
-    Phone,
-    Store,
-    Trash2,
-    Upload
+  Crown,
+  ExternalLink,
+  GripVertical,
+  HelpCircle,
+  ImagePlus,
+  Info,
+  Loader2,
+  MessageCircle,
+  Palette,
+  Phone,
+  Store,
+  Trash2,
+  Upload
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -56,7 +54,6 @@ interface Banner {
 export default function Settings() {
   const { user } = useAuth();
   const { company, companyId } = useCompanyContext();
-  const { storeSettings } = useStoreSettings();
   const { planTier, planStatus, subscriptionEnd, isActive } = useSubscription();
   const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -69,6 +66,8 @@ export default function Settings() {
   const [newBannerData, setNewBannerData] = useState({ title: '', link: '' });
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [supportNumber, setSupportNumber] = useState<string | null>(null);
+  const [supportLoading, setSupportLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     store_name: '',
@@ -120,7 +119,11 @@ export default function Settings() {
 
   const handleResetPassword = async () => {
     if (!user?.email) {
-      toast({ title: 'Usuário não encontrado', variant: 'destructive' });
+      toast({ 
+        title: 'Usuário não encontrado', 
+        description: 'Não foi possível identificar seu email.',
+        variant: 'destructive' 
+      });
       return;
     }
 
@@ -130,19 +133,75 @@ export default function Settings() {
         redirectTo: `${window.location.origin}/reset-password`
       });
 
-      if (error) throw error;
-
-      toast({ 
-        title: 'Email enviado!', 
-        description: 'Verifique sua caixa de entrada para redefinir a senha.' 
-      });
+      if (error) {
+        toast({ 
+          title: 'Erro ao enviar email',
+          description: error.message || 'Não foi possível enviar o email. Tente novamente.',
+          variant: 'destructive' 
+        });
+      } else {
+        toast({ 
+          title: 'Email enviado!', 
+          description: 'Verifique sua caixa de entrada para redefinir sua senha.' 
+        });
+      }
     } catch (error) {
       console.error('Erro ao enviar email:', error);
-      toast({ title: 'Erro ao enviar email de redefinição', variant: 'destructive' });
+      toast({ 
+        title: 'Erro',
+        description: 'Ocorreu um erro ao enviar o email. Tente novamente.',
+        variant: 'destructive' 
+      });
     } finally {
       setResettingPassword(false);
     }
   };
+
+  const fetchGlobalSupportNumber = async () => {
+    if (!user) return;
+
+    setSupportLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('Sessão não encontrada');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-support-number`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error('Erro ao carregar suporte global:', response.status, responseText);
+        setSupportNumber(null);
+        return;
+      }
+
+      const json = await response.json();
+      setSupportNumber(json.whatsapp_number || null);
+    } catch (error) {
+      console.error('Erro ao buscar número de suporte global:', error);
+      setSupportNumber(null);
+    } finally {
+      setSupportLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchGlobalSupportNumber();
+    }
+  }, [user]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -561,14 +620,26 @@ export default function Settings() {
                 Precisa alterar seu plano, cancelar assinatura ou tirar dúvidas?
                 Fale diretamente com nosso suporte pelo WhatsApp.
               </p>
+              <p className="text-sm text-muted-foreground">
+                Número de suporte: <span className="font-medium text-foreground">{supportLoading ? 'Carregando...' : supportNumber || 'Não configurado'}</span>
+              </p>
               <Button
                 type="button"
+                disabled={supportLoading || !supportNumber}
                 className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white"
                 onClick={() => {
+                  if (!supportNumber) {
+                    toast({
+                      title: 'WhatsApp de suporte não configurado',
+                      description: 'O número global de suporte ainda não está disponível.',
+                      variant: 'destructive'
+                    });
+                    return;
+                  }
+
                   const msg = encodeURIComponent(
                     `Olá! Sou da loja "${formData.store_name || 'minha empresa'}" e gostaria de ajuda com meu plano.`
                   );
-                  const supportNumber = storeSettings?.whatsapp_number;
                   window.open(`https://wa.me/${supportNumber}?text=${msg}`, '_blank');
                 }}
               >
@@ -578,26 +649,7 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Segurança */}
-          <div className="form-section space-y-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <KeyRound className="w-4 h-4" />
-              Segurança
-            </h3>
-            <div className="p-4 rounded-lg bg-secondary/30">
-              <p className="text-sm text-muted-foreground mb-3">
-                Enviaremos um link para redefinir sua senha por email.
-              </p>
-              <Button 
-                variant="outline" 
-                onClick={handleResetPassword}
-                disabled={resettingPassword}
-              >
-                {resettingPassword && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                Redefinir Senha
-              </Button>
-            </div>
-          </div>
+          
 
           {/* Banners */}
           <div className="form-section space-y-4">

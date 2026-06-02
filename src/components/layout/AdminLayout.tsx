@@ -1,26 +1,34 @@
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { useScrollFade } from '@/hooks/useScrollFade';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import {
-    ChevronLeft,
-    FolderTree,
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    Package,
-    ReceiptText,
-    Settings,
-    ShoppingCart,
-    Sliders,
-    Store,
-    Ticket,
-    UserCog,
-    Users,
-    Wallet,
-    X
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  FolderTree,
+  LayoutDashboard,
+  Loader2,
+  LogOut,
+  Menu,
+  Package,
+  ReceiptText,
+  Settings,
+  ShoppingCart,
+  Sliders,
+  Store,
+  Ticket,
+  UserCog,
+  Users,
+  Wallet,
+  X
 } from 'lucide-react';
 import { ReactNode, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -57,6 +65,36 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const desktopScroll = useScrollFade<HTMLElement>();
   const mobileScroll = useScrollFade<HTMLElement>();
+  const [userDialogOpen, setUserDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+
+  const validatePassword = (pw: string) => {
+    const errors: string[] = [];
+    const minLength = 8;
+    const hasLower = /[a-z]/.test(pw);
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasNumber = /[0-9]/.test(pw);
+    const hasSymbol = /[^A-Za-z0-9]/.test(pw);
+    const common = [
+      '123456','password','12345678','qwerty','abc123','password1','111111','123456789','12345','senha','1234','admin'
+    ];
+
+    if (pw.length < minLength) errors.push(`A senha deve ter ao menos ${minLength} caracteres.`);
+    if (!hasLower) errors.push('Inclua letras minúsculas.');
+    if (!hasUpper) errors.push('Inclua letras maiúsculas.');
+    if (!hasNumber) errors.push('Inclua pelo menos um número.');
+    if (!hasSymbol) errors.push('Inclua pelo menos um símbolo (ex.: !@#$%).');
+    const pwLower = pw.toLowerCase();
+    if (user?.email && pwLower.includes(user.email.split('@')[0].toLowerCase())) errors.push('A senha não pode conter seu nome de usuário/email.');
+    if (common.includes(pwLower)) errors.push('Senha muito comum ou previsível; escolha outra.');
+
+    return errors;
+  };
 
   const visibleNavItems = isRestricted
     ? navItems.filter((i) => allowedMenus.has(i.menuKey))
@@ -70,6 +108,66 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordErrors([]);
+    if (!newPassword || !confirmPassword) {
+      setPasswordErrors(['Preencha as duas senhas.']);
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordErrors(['As senhas não conferem.']);
+      return;
+    }
+
+    const validation = validatePassword(newPassword);
+    if (validation.length > 0) {
+      setPasswordErrors(validation);
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        toast({ title: 'Sessão ausente', description: 'Sua sessão não foi encontrada. Faça login novamente.', variant: 'destructive' });
+        // clear local auth state and redirect to login
+        await signOut();
+        navigate('/auth');
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        console.error('updateUser error', error);
+        const msg = (error as any)?.message || '';
+        // handle session issues
+        if (msg.toLowerCase().includes('session')) {
+          toast({ title: 'Sessão inválida', description: 'Sua sessão expirou. Faça login novamente.', variant: 'destructive' });
+          await signOut();
+          navigate('/auth');
+          return;
+        }
+        // handle server-side weak password rejection
+        if (/weak|known|easy to guess|comum|fraca/i.test(msg)) {
+          toast({ title: 'Senha rejeitada pelo servidor', description: 'A senha foi considerada fraca ou muito comum. Aumente o comprimento e a complexidade (maiúsculas, números, símbolos).', variant: 'destructive' });
+          return;
+        }
+        toast({ title: 'Erro ao alterar senha', description: msg || 'Tente novamente.', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Senha alterada', description: 'Sua senha foi atualizada com sucesso.' });
+      setUserDialogOpen(false);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordErrors([]);
+    } catch (err) {
+      console.error('Erro ao alterar senha:', err);
+      toast({ title: 'Erro', description: 'Ocorreu um erro ao alterar a senha.', variant: 'destructive' });
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -149,19 +247,67 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         <div className="p-3 border-t border-sidebar-border">
-          {sidebarOpen && (
-            <div className="mb-3 p-3 bg-sidebar-accent rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold shrink-0">
-                  {userInitial}
+          <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+            <DialogTrigger asChild>
+              {sidebarOpen ? (
+                <button className="mb-3 p-3 bg-sidebar-accent rounded-lg w-full text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold shrink-0">
+                      {userInitial}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
+                      <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+                    </div>
+                  </div>
+                </button>
+              ) : (
+                <button className="w-full flex items-center justify-center p-2">
+                  <div className="w-6 h-6 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold">{userInitial}</div>
+                </button>
+              )}
+            </DialogTrigger>
+
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Alterar senha</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 mt-2">
+                <div className="space-y-1">
+                  <Label htmlFor="sidebarNewPassword">Nova senha</Label>
+                  <div className="relative">
+                    <Input id="sidebarNewPassword" type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={changingPassword} />
+                    <Button variant="ghost" size="icon" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+                <div className="space-y-1">
+                  <Label htmlFor="sidebarConfirmPassword">Confirmar senha</Label>
+                  <div className="relative">
+                    <Input id="sidebarConfirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={changingPassword} />
+                    <Button variant="ghost" size="icon" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2 top-1/2 -translate-y-1/2" aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}>
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+                {passwordErrors.length > 0 && (
+                  <div className="text-sm text-destructive space-y-1">
+                    {passwordErrors.map((err, idx) => (
+                      <p key={idx}>{err}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button className="flex-1" onClick={handleChangePassword} disabled={changingPassword}>
+                    {changingPassword && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Salvar
+                  </Button>
+                  <Button variant="ghost" onClick={() => setUserDialogOpen(false)}>Fechar</Button>
                 </div>
               </div>
-            </div>
-          )}
+            </DialogContent>
+          </Dialog>
           <button
             onClick={handleSignOut}
             className={cn(
@@ -256,17 +402,62 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         <div className="p-3 border-t border-sidebar-border">
-          <div className="mb-3 p-3 bg-sidebar-accent rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold shrink-0">
-                {userInitial}
+          <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+            <DialogTrigger asChild>
+              <div className="mb-3 p-3 bg-sidebar-accent rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold shrink-0">
+                    {userInitial}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
+                    <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+            </DialogTrigger>
+
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Alterar senha</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 mt-2">
+                <div className="space-y-1">
+                  <Label htmlFor="sidebarNewPasswordMobile">Nova senha</Label>
+                  <div className="relative">
+                    <Input id="sidebarNewPasswordMobile" type={showPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} disabled={changingPassword} />
+                    <Button variant="ghost" size="icon" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 -translate-y-1/2" aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}>
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="sidebarConfirmPasswordMobile">Confirmar senha</Label>
+                  <div className="relative">
+                    <Input id="sidebarConfirmPasswordMobile" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={changingPassword} />
+                    <Button variant="ghost" size="icon" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2 top-1/2 -translate-y-1/2" aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}>
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+                {passwordErrors.length > 0 && (
+                  <div className="text-sm text-destructive space-y-1">
+                    {passwordErrors.map((err, idx) => (
+                      <p key={idx}>{err}</p>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button className="flex-1" onClick={handleChangePassword} disabled={changingPassword}>
+                    {changingPassword && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Salvar
+                  </Button>
+                  <Button variant="ghost" onClick={() => setUserDialogOpen(false)}>Fechar</Button>
+                </div>
               </div>
-            </div>
-          </div>
+            </DialogContent>
+          </Dialog>
+
           <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive"

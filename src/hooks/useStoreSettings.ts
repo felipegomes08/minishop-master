@@ -25,7 +25,9 @@ export function useStoreSettings() {
       const { data, error } = await supabase
         .from('store_settings')
         .select('*')
-        .single();
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (isMounted) {
         if (error) {

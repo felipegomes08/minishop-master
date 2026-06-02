@@ -398,16 +398,29 @@ export default function Users() {
                       {new Date(u.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
-                      {!u.is_owner && u.user_id !== user?.id && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteTarget(u)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      )}
+                      <div className="flex justify-end gap-1">
+                        {u.user_id !== user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit(u)}
+                            title="Editar"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!u.is_owner && u.user_id !== user?.id && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteTarget(u)}
+                            className="text-destructive hover:text-destructive"
+                            title="Remover"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

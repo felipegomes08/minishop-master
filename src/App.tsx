@@ -1,37 +1,37 @@
-import { Toaster } from "@/components/ui/toaster";
+import AdminLayout from "@/components/layout/AdminLayout";
+import MasterAdminLayout from "@/components/layout/MasterAdminLayout";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useSuperAdminCheck } from "@/hooks/useSuperAdminCheck";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { PATH_TO_MENU_KEY } from "@/lib/planLimits";
-import AdminLayout from "@/components/layout/AdminLayout";
-import MasterAdminLayout from "@/components/layout/MasterAdminLayout";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Products from "./pages/Products";
-import Categories from "./pages/Categories";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Attributes from "./pages/Attributes";
-import Customers from "./pages/Customers";
-import Sales from "./pages/Sales";
+import Auth from "./pages/Auth";
+import Catalog from "./pages/Catalog";
+import Categories from "./pages/Categories";
 import Coupons from "./pages/Coupons";
-import Settings from "./pages/Settings";
+import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
-import NotFound from "./pages/NotFound";
-import Users from "./pages/Users";
 import Financial from "./pages/Financial";
-import Catalog from "./pages/Catalog";
-import ProductDetail from "./pages/ProductDetail";
 import Landing from "./pages/Landing";
+import NotFound from "./pages/NotFound";
 import PostCheckout from "./pages/PostCheckout";
-import MasterDashboard from "./pages/master/MasterDashboard";
+import ProductDetail from "./pages/ProductDetail";
+import Products from "./pages/Products";
+import ResetPassword from "./pages/ResetPassword";
+import Sales from "./pages/Sales";
+import Settings from "./pages/Settings";
+import Users from "./pages/Users";
 import MasterCompanies from "./pages/master/MasterCompanies";
-import MasterUsers from "./pages/master/MasterUsers";
+import MasterDashboard from "./pages/master/MasterDashboard";
 import MasterSettings from "./pages/master/MasterSettings";
+import MasterUsers from "./pages/master/MasterUsers";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +116,7 @@ function AppRoutes() {
       
       {/* Rotas Administrativas */}
       <Route path="/auth" element={<Auth />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
       <Route path="/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />

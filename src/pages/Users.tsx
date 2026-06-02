@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { useSubscription } from '@/hooks/useSubscription';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +42,7 @@ export default function Users() {
   const { user } = useAuth();
   const { companyId, loading: companyLoading } = useCompanyContext();
   const { planTier, loading: subLoading } = useSubscription();
+  const { isRestricted, loading: permissionsLoading } = useUserPermissions();
 
   const [users, setUsers] = useState<CompanyUserRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,8 @@ export default function Users() {
 
   const limit = getUserLimitForPlan(planTier);
   const used = users.length;
-  const canAdd = used < limit;
+  const canManageUsers = !isRestricted;
+  const canAdd = canManageUsers && used < limit;
 
   useEffect(() => {
     if (companyId) fetchUsers();
@@ -150,6 +153,10 @@ export default function Users() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canManageUsers) {
+      toast.error('Apenas o proprietário da empresa pode adicionar usuários');
+      return;
+    }
     if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
       toast.error('Preencha todos os campos');
       return;
@@ -189,6 +196,10 @@ export default function Users() {
   }
 
   function openEdit(u: CompanyUserRow) {
+    if (!canManageUsers) {
+      toast.error('Apenas o proprietário da empresa pode editar usuários');
+      return;
+    }
     setEditTarget(u);
     setEditForm({
       name: u.name ?? '',
@@ -209,6 +220,10 @@ export default function Users() {
   async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!editTarget) return;
+    if (!canManageUsers) {
+      toast.error('Apenas o proprietário da empresa pode editar usuários');
+      return;
+    }
     if (!editForm.name.trim() || !editForm.email.trim()) {
       toast.error('Nome e e-mail são obrigatórios');
       return;
@@ -247,6 +262,11 @@ export default function Users() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
+    if (!canManageUsers) {
+      toast.error('Apenas o proprietário da empresa pode remover usuários');
+      setDeleteTarget(null);
+      return;
+    }
     setDeleting(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -267,7 +287,7 @@ export default function Users() {
     }
   }
 
-  if (companyLoading || subLoading) {
+  if (companyLoading || subLoading || permissionsLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
@@ -288,7 +308,7 @@ export default function Users() {
         <Button
           onClick={() => { resetForm(); setDialogOpen(true); }}
           disabled={!canAdd}
-          title={!canAdd ? `Limite do plano ${planTier ?? ''} atingido` : ''}
+          title={!canManageUsers ? 'Apenas o proprietário pode adicionar usuários' : !canAdd ? `Limite do plano ${planTier ?? ''} atingido` : ''}
         >
           <Plus className="w-4 h-4 mr-2" /> Adicionar usuário
         </Button>
@@ -311,7 +331,7 @@ export default function Users() {
               style={{ width: `${Math.min(100, (used / limit) * 100)}%` }}
             />
           </div>
-          {!canAdd && (
+          {canManageUsers && !canAdd && (
             <p className="text-sm text-amber-600 mt-3">
               Você atingiu o limite do seu plano. Faça upgrade para adicionar mais usuários.
             </p>
@@ -319,7 +339,7 @@ export default function Users() {
         </CardContent>
       </Card>
 
-      {users.some((u) => !u.is_owner && NEW_MENU_KEYS.some((k) => !u.menu_keys.includes(k))) && (
+      {canManageUsers && users.some((u) => !u.is_owner && NEW_MENU_KEYS.some((k) => !u.menu_keys.includes(k))) && (
         <Card className="border-amber-300 bg-amber-50">
           <CardContent className="flex items-start gap-3 py-4">
             <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
@@ -399,7 +419,7 @@ export default function Users() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {u.user_id !== user?.id && (
+                        {canManageUsers && u.user_id !== user?.id && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -409,7 +429,7 @@ export default function Users() {
                             <Pencil className="w-4 h-4" />
                           </Button>
                         )}
-                        {!u.is_owner && u.user_id !== user?.id && (
+                        {canManageUsers && !u.is_owner && u.user_id !== user?.id && (
                           <Button
                             variant="ghost"
                             size="icon"

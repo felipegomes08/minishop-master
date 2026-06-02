@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { Store, Mail, Lock, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { ArrowRight, KeyRound, Loader2, Lock, Mail, Store } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
@@ -19,6 +19,13 @@ export default function Auth() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery') && hash.includes('access_token')) {
+      navigate('/reset-password', { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,8 +180,8 @@ export default function Auth() {
     setResetLoading(true);
 
     try {
-      const { error } = await supabase.functions.invoke('reset-password', {
-        body: { email: resetEmail }
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`
       });
 
       if (error) {
@@ -186,7 +193,7 @@ export default function Auth() {
       } else {
         toast({
           title: 'Email enviado!',
-          description: 'Verifique sua caixa de entrada para a senha temporária.',
+          description: 'Verifique sua caixa de entrada para redefinir sua senha.',
         });
         setResetDialogOpen(false);
         setResetEmail('');

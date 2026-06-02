@@ -20,7 +20,7 @@ import {
     UserCog,
     Users,
     Wallet,
-    X,
+    X
 } from 'lucide-react';
 import { ReactNode, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -46,11 +46,14 @@ const navItems = [
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const { company } = useCompanyContext();
   const { allowedMenus, isRestricted } = useUserPermissions();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const userName = user?.user_metadata?.name || user?.user_metadata?.full_name || user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Usuário';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const desktopScroll = useScrollFade<HTMLElement>();
   const mobileScroll = useScrollFade<HTMLElement>();
@@ -146,6 +149,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         <div className="p-3 border-t border-sidebar-border">
+          {sidebarOpen && (
+            <div className="mb-3 p-3 bg-sidebar-accent rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold shrink-0">
+                  {userInitial}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+                </div>
+              </div>
+            </div>
+          )}
           <button
             onClick={handleSignOut}
             className={cn(
@@ -240,6 +256,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         <div className="p-3 border-t border-sidebar-border">
+          <div className="mb-3 p-3 bg-sidebar-accent rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-xs font-semibold shrink-0">
+                {userInitial}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-sidebar-foreground truncate">{userName}</p>
+                <p className="text-xs text-sidebar-foreground/60 truncate">{user?.email}</p>
+              </div>
+            </div>
+          </div>
           <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sidebar-foreground/70 hover:bg-destructive/20 hover:text-destructive"

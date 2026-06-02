@@ -90,6 +90,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { count: callerPermCount } = await admin
+      .from("user_menu_permissions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", callerId)
+      .eq("company_id", companyId);
+
+    if ((callerPermCount ?? 0) > 0) {
+      return new Response(
+        JSON.stringify({ error: "Apenas o proprietario da empresa pode criar usuarios" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     const { data: company } = await admin
       .from("companies")
       .select("plan_tier, is_active")

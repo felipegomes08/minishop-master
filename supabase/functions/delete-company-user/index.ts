@@ -77,6 +77,22 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { count: callerPermCount } = await admin
+      .from("user_menu_permissions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", callerId)
+      .eq("company_id", companyId);
+
+    if ((callerPermCount ?? 0) > 0) {
+      return new Response(
+        JSON.stringify({ error: "Apenas o proprietario da empresa pode excluir usuarios" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Confirma que o alvo pertence à mesma empresa
     const { data: targetMembership } = await admin
       .from("company_users")

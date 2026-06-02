@@ -12,20 +12,20 @@ import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import {
-  Crown,
-  ExternalLink,
-  GripVertical,
-  HelpCircle,
-  ImagePlus,
-  Info,
-  KeyRound,
-  Loader2,
-  MessageCircle,
-  Palette,
-  Phone,
-  Store,
-  Trash2,
-  Upload
+    Crown,
+    ExternalLink,
+    GripVertical,
+    HelpCircle,
+    ImagePlus,
+    Info,
+    KeyRound,
+    Loader2,
+    MessageCircle,
+    Palette,
+    Phone,
+    Store,
+    Trash2,
+    Upload
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -127,7 +127,7 @@ export default function Settings() {
     setResettingPassword(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth`
+        redirectTo: `${window.location.origin}/reset-password`
       });
 
       if (error) throw error;

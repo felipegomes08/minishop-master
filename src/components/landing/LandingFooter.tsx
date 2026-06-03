@@ -1,4 +1,4 @@
-import lojixLogo from "@/assets/lojix_logo.svg";
+import lojixIcon from "@/assets/lojix_icon.png";
 
 export default function LandingFooter() {
   return (
@@ -7,7 +7,7 @@ export default function LandingFooter() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <a href="#" className="flex items-center">
-              <img src={lojixLogo} alt="Lojix" className="h-7" />
+              <img src={lojixIcon} alt="Lojix" className="h-7" />
             </a>
             <p className="text-sm text-gray-500 mt-1">
               Gestão inteligente para lojas que querem crescer.

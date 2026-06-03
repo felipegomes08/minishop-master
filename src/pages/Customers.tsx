@@ -1,28 +1,30 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { BlockUpgrade } from '@/components/ui/block-upgrade';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
-import { 
-  Plus, 
-  Search, 
-  Edit2, 
-  Trash2, 
-  Users,
-  Phone,
-  MapPin,
+import { useCompanyContext } from '@/hooks/useCompanyContext';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Edit2,
   Loader2,
+  MapPin,
+  Phone,
+  Plus,
+  Search,
   Ticket,
+  Trash2,
+  Users,
   X
 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useEffect, useState } from 'react';
 
 interface Customer {
   id: string;
@@ -48,7 +50,10 @@ interface CustomerCoupon {
 }
 
 export default function Customers() {
-  const { companyId } = useCompanyContext();
+  const { companyId, loading: companyLoading } = useCompanyContext();
+  const { planTier, loading: subLoading } = useSubscription();
+  const allowed = planTier === 'prata' || planTier === 'ouro';
+
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [customerCouponsMap, setCustomerCouponsMap] = useState<Record<string, CustomerCoupon[]>>({});
@@ -95,8 +100,8 @@ export default function Customers() {
   };
 
   useEffect(() => {
-    if (companyId) fetchData();
-  }, [companyId]);
+    if (companyId && allowed) fetchData();
+  }, [companyId, allowed]);
 
   const resetForm = () => {
     setFormData({ name: '', phone: '', address: '', notes: '' });
@@ -231,6 +236,19 @@ export default function Customers() {
     const linkedCouponIds = (customerCouponsMap[customerId] || []).map(cc => cc.coupon_id);
     return coupons.filter(c => !linkedCouponIds.includes(c.id));
   };
+
+  if (companyLoading || subLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32" />
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  if (!allowed) {
+    return <BlockUpgrade />
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

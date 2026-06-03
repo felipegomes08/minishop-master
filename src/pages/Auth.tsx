@@ -1,3 +1,4 @@
+import lojixIcon from '@/assets/lojix_icon.png';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -6,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowRight, KeyRound, Loader2, Lock, Mail, Store } from 'lucide-react';
+import { ArrowRight, KeyRound, Loader2, Lock, Mail } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -214,7 +215,7 @@ export default function Auth() {
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <Store className="w-8 h-8 text-primary-foreground" />
+            <img src={lojixIcon} alt="Lojix" className="w-16 h-16 rounded-lg" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Painel Admin</h1>
           <p className="text-muted-foreground mt-1">Gerencie sua loja online</p>

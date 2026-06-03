@@ -1,26 +1,28 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BlockUpgrade } from '@/components/ui/block-upgrade';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, subDays, startOfDay, endOfDay } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { 
-  DollarSign, 
-  ShoppingCart, 
-  Package, 
-  Users,
-  TrendingUp,
-  CalendarIcon,
-  Sparkles,
-  Loader2,
-  RefreshCw
-} from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useSubscription } from '@/hooks/useSubscription';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { endOfDay, format, startOfDay, subDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  CalendarIcon,
+  DollarSign,
+  Loader2,
+  Package,
+  RefreshCw,
+  ShoppingCart,
+  Sparkles,
+  TrendingUp,
+  Users
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { DateRange } from 'react-day-picker';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 interface DashboardStats {
   totalRevenue: number;
@@ -47,6 +49,8 @@ export default function Dashboard() {
     from: subDays(new Date(), 30),
     to: new Date()
   });
+  const { planTier } = useSubscription();
+  const allowed = planTier === 'prata' || planTier === 'ouro';
 
   const fetchStats = async () => {
     if (!dateRange?.from || !dateRange?.to) return;
@@ -361,17 +365,18 @@ export default function Dashboard() {
             <Sparkles className="w-5 h-5 text-accent" />
             Insights de IA
           </CardTitle>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={fetchAIInsights}
-            disabled={insightsLoading}
-          >
+          {allowed && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={fetchAIInsights}
+              disabled={insightsLoading}
+            >
             <RefreshCw className={cn("w-4 h-4", insightsLoading && "animate-spin")} />
-          </Button>
+          </Button>)}
         </CardHeader>
         <CardContent>
-          {insightsLoading ? (
+          {!allowed ? <BlockUpgrade /> : (insightsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="w-6 h-6 animate-spin text-accent" />
               <span className="ml-2 text-muted-foreground">Analisando seus dados...</span>
@@ -397,7 +402,8 @@ export default function Dashboard() {
             <div className="text-center py-8 text-muted-foreground">
               Adicione produtos e faça vendas para receber insights da IA
             </div>
-          )}
+          ))}
+          
         </CardContent>
       </Card>
 

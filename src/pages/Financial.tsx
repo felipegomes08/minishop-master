@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge';
+import { BlockUpgrade } from '@/components/ui/block-upgrade';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,22 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useCompanyContext } from '@/hooks/useCompanyContext';
-import { useStoreSettings } from '@/hooks/useStoreSettings';
 import { useSubscription } from '@/hooks/useSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-    CalendarIcon,
-    Crown,
-    Loader2,
-    MessageCircle, Send,
-    ShoppingBag,
-    Sparkles,
-    TrendingDown,
-    TrendingUp,
-    Wallet,
+  CalendarIcon,
+  Loader2,
+  Send,
+  ShoppingBag,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -42,10 +41,8 @@ interface ChatMsg { role: 'user' | 'assistant'; content: string }
 
 export default function Financial() {
   const { companyId, loading: companyLoading } = useCompanyContext();
-  const { storeSettings } = useStoreSettings();
   const { planTier, loading: subLoading } = useSubscription();
   const allowed = planTier === 'prata' || planTier === 'ouro';
-  const supportWhatsApp = storeSettings?.whatsapp_number || '5519996688116';
 
   const [startDate, setStartDate] = useState<Date | undefined>(startOfMonth());
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
@@ -198,27 +195,7 @@ export default function Financial() {
   }
 
   if (!allowed) {
-    return (
-      <div className="max-w-2xl mx-auto mt-12">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Crown className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle>Recurso exclusivo dos planos Prata e Ouro</CardTitle>
-            <CardDescription>
-              O painel Financeiro com assistente de IA está disponível a partir do plano Prata.
-              Faça upgrade para acessar análises de receita, despesas e o chat inteligente sobre seu negócio.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => window.open(`https://wa.me/${supportWhatsApp}?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar o Financeiro.')}`, '_blank')}>
-              <MessageCircle className="w-4 h-4 mr-2" /> Falar com o suporte
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <BlockUpgrade/>
   }
 
   const periodLabel = `${startDate ? format(startDate, 'dd/MM/yyyy') : '—'} a ${endDate ? format(endDate, 'dd/MM/yyyy') : '—'}`;

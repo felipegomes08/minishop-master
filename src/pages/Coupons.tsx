@@ -1,7 +1,7 @@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { BlockUpgrade } from '@/components/ui/block-upgrade';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -18,16 +18,14 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Calendar,
-  Crown,
   DollarSign,
   Edit2,
   Loader2,
-  MessageCircle,
   Percent,
   Plus,
   Search,
   Ticket,
-  Trash2,
+  Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -51,7 +49,6 @@ export default function Coupons() {
   const { storeSettings } = useStoreSettings();
   const { planTier, loading: subLoading } = useSubscription();
   const allowed = planTier === 'prata' || planTier === 'ouro';
-  const supportWhatsApp = storeSettings?.whatsapp_number || '5519996688116';
 
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
@@ -247,27 +244,7 @@ export default function Coupons() {
   }
 
   if (!allowed) {
-    return (
-      <div className="max-w-2xl mx-auto mt-12">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
-              <Crown className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle>Recurso exclusivo dos planos Prata e Ouro</CardTitle>
-            <CardDescription>
-              A gestão de cupons de desconto está disponível a partir do plano Prata.
-              Faça upgrade para criar e gerenciar cupons para sua loja.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => window.open(`https://wa.me/${supportWhatsApp}?text=${encodeURIComponent('Olá! Quero fazer upgrade do meu plano para acessar os Cupons.')}`, '_blank')}>
-              <MessageCircle className="w-4 h-4 mr-2" /> Falar com o suporte
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <BlockUpgrade/>
   }
 
   return (

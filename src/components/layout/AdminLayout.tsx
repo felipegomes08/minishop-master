@@ -1,3 +1,4 @@
+import lojixIcon from '@/assets/lojix_icon.png';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -190,7 +191,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <Store className="w-5 h-5 text-sidebar-primary-foreground" />
+                  <img src={lojixIcon} alt="Lojix" className="w-8 h-8 rounded-lg" />
                 )}
               </div>
               <span className="font-semibold text-sidebar-foreground">{company?.name ?? 'Admin'}</span>
@@ -488,7 +489,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <Store className="w-4 h-4 text-primary-foreground" />
+                <img src={lojixIcon} alt="Lojix" className="w-8 h-8 rounded-lg" />
               )}
             </div>
             <span className="font-semibold">{company?.name ?? 'Admin'}</span>

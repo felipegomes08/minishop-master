@@ -33,15 +33,6 @@ const PLAN_LABELS: Record<string, { label: string; color: string }> = {
   ouro: { label: 'Ouro', color: 'bg-yellow-500 text-white' },
 };
 
-interface CompanySettings {
-  id: string;
-  name: string;
-  logo_url: string | null;
-  primary_color: string;
-  secondary_color: string;
-  whatsapp_number: string | null;
-}
-
 interface Banner {
   id: string;
   image_url: string;
@@ -55,19 +46,15 @@ export default function Settings() {
   const { user } = useAuth();
   const { company, companyId } = useCompanyContext();
   const { planTier, planStatus, subscriptionEnd, isActive } = useSubscription();
-  const [settings, setSettings] = useState<CompanySettings | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
-  const [resettingPassword, setResettingPassword] = useState(false);
   const [bannerDialogOpen, setBannerDialogOpen] = useState(false);
   const [newBannerData, setNewBannerData] = useState({ title: '', link: '' });
   const [bannerFile, setBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  const [supportNumber, setSupportNumber] = useState<string | null>(null);
-  const [supportLoading, setSupportLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     store_name: '',
@@ -88,14 +75,6 @@ export default function Settings() {
 
       if (companyRes.data) {
         const c = companyRes.data;
-        setSettings({
-          id: c.id,
-          name: c.name,
-          logo_url: c.logo_url,
-          primary_color: c.primary_color || '#4F46E5',
-          secondary_color: c.secondary_color || '#F59E0B',
-          whatsapp_number: c.whatsapp_number,
-        });
         setFormData({
           store_name: c.name,
           logo_url: c.logo_url || '',
@@ -116,92 +95,6 @@ export default function Settings() {
   useEffect(() => {
     if (companyId) fetchData();
   }, [companyId]);
-
-  const handleResetPassword = async () => {
-    if (!user?.email) {
-      toast({ 
-        title: 'Usuário não encontrado', 
-        description: 'Não foi possível identificar seu email.',
-        variant: 'destructive' 
-      });
-      return;
-    }
-
-    setResettingPassword(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-
-      if (error) {
-        toast({ 
-          title: 'Erro ao enviar email',
-          description: error.message || 'Não foi possível enviar o email. Tente novamente.',
-          variant: 'destructive' 
-        });
-      } else {
-        toast({ 
-          title: 'Email enviado!', 
-          description: 'Verifique sua caixa de entrada para redefinir sua senha.' 
-        });
-      }
-    } catch (error) {
-      console.error('Erro ao enviar email:', error);
-      toast({ 
-        title: 'Erro',
-        description: 'Ocorreu um erro ao enviar o email. Tente novamente.',
-        variant: 'destructive' 
-      });
-    } finally {
-      setResettingPassword(false);
-    }
-  };
-
-  const fetchGlobalSupportNumber = async () => {
-    if (!user) return;
-
-    setSupportLoading(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-
-      if (!accessToken) {
-        throw new Error('Sessão não encontrada');
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-support-number`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const responseText = await response.text();
-        console.error('Erro ao carregar suporte global:', response.status, responseText);
-        setSupportNumber(null);
-        return;
-      }
-
-      const json = await response.json();
-      setSupportNumber(json.whatsapp_number || null);
-    } catch (error) {
-      console.error('Erro ao buscar número de suporte global:', error);
-      setSupportNumber(null);
-    } finally {
-      setSupportLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchGlobalSupportNumber();
-    }
-  }, [user]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -620,27 +513,14 @@ export default function Settings() {
                 Precisa alterar seu plano, cancelar assinatura ou tirar dúvidas?
                 Fale diretamente com nosso suporte pelo WhatsApp.
               </p>
-              <p className="text-sm text-muted-foreground">
-                Número de suporte: <span className="font-medium text-foreground">{supportLoading ? 'Carregando...' : supportNumber || 'Não configurado'}</span>
-              </p>
               <Button
                 type="button"
-                disabled={supportLoading || !supportNumber}
                 className="w-full gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white"
                 onClick={() => {
-                  if (!supportNumber) {
-                    toast({
-                      title: 'WhatsApp de suporte não configurado',
-                      description: 'O número global de suporte ainda não está disponível.',
-                      variant: 'destructive'
-                    });
-                    return;
-                  }
-
                   const msg = encodeURIComponent(
                     `Olá! Sou da loja "${formData.store_name || 'minha empresa'}" e gostaria de ajuda com meu plano.`
                   );
-                  window.open(`https://wa.me/${supportNumber}?text=${msg}`, '_blank');
+                  window.open(`https://wa.me/${import.meta.env.VITE_SUPPORT_NUMBER}?text=${msg}`, '_blank');
                 }}
               >
                 <MessageCircle className="w-4 h-4" />

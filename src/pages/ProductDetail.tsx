@@ -1,15 +1,16 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, Navigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { ProductGallery } from "@/components/catalog/ProductGallery";
+import { ProductDetailSkeleton } from "@/components/catalog/CatalogSkeleton";
 import { PriceDisplay } from "@/components/catalog/PriceDisplay";
 import { ProductCard } from "@/components/catalog/ProductCard";
-import { ProductDetailSkeleton } from "@/components/catalog/CatalogSkeleton";
-import { VirtualTryOnDialog } from "@/components/catalog/VirtualTryOnDialog";
+import { ProductGallery } from "@/components/catalog/ProductGallery";
 import { VariantSelector } from "@/components/catalog/VariantSelector";
-import { Button } from "@/components/ui/button";
+import { VirtualTryOnDialog } from "@/components/catalog/VirtualTryOnDialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShoppingCart, Package, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useSubscription } from "@/hooks/useSubscription";
+import { supabase } from "@/integrations/supabase/client";
+import { ArrowLeft, Package, ShoppingCart, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 interface Product {
@@ -50,6 +51,8 @@ export default function ProductDetail() {
   const [tryOnOpen, setTryOnOpen] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<{ options: { label: string }[] } | null>(null);
   const [displayPrice, setDisplayPrice] = useState(0);
+  const { planTier } = useSubscription();
+  const allowed = planTier === 'prata' || planTier === 'ouro';
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -281,7 +284,7 @@ Poderia me dar mais informações?`;
 
             {/* Botões de Ação */}
             <div className="space-y-3">
-              {hasImages && (
+              {(hasImages && allowed) && (
                 <Button 
                   variant="outline"
                   size="lg" 

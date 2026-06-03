@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { Menu, X, LogIn } from "lucide-react";
-import lojixLogo from "@/assets/lojix_logo.svg";
+import lojixIcon from "@/assets/lojix_icon.png";
+import { LogIn, Menu, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const navLinks = [
   { label: "Funcionalidades", href: "#funcionalidades" },
@@ -29,7 +29,7 @@ export default function LandingHeader() {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         <a href="#" className="flex items-center">
-          <img src={lojixLogo} alt="Lojix" className="h-8" />
+          <img src={lojixIcon} alt="Lojix" className="h-8" />
         </a>
 
         <nav className="hidden md:flex items-center gap-8">

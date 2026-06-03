@@ -1,14 +1,5 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useCompanyContext } from '@/hooks/useCompanyContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { CurrencyInput } from '@/components/ui/currency-input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
+import { ProductVariantEditor } from '@/components/products/ProductVariantEditor';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,35 +11,47 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from '@/hooks/use-toast';
-import { 
-  Plus, 
-  Search, 
-  Edit2, 
-  Copy, 
-  Trash2, 
-  Image as ImageIcon,
-  X,
-  Upload,
-  Loader2,
-  Check,
-  Camera,
-  MoreVertical
-} from 'lucide-react';
+import { BlockUpgrade } from '@/components/ui/block-upgrade';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CurrencyInput } from '@/components/ui/currency-input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import { ImportFromPhotoDialog } from '@/components/products/ImportFromPhotoDialog';
-import { ProductVariantEditor } from '@/components/products/ProductVariantEditor';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/use-toast';
+import { useCompanyContext } from '@/hooks/useCompanyContext';
 import { useSubscription } from '@/hooks/useSubscription';
-import { getImageLimitForPlan } from '@/lib/planLimits';
+import { supabase } from '@/integrations/supabase/client';
 import { getThumbUrl } from '@/lib/imageThumb';
+import { getImageLimitForPlan, getProductLimitForPlan } from '@/lib/planLimits';
+import { cn } from '@/lib/utils';
+import {
+  Camera,
+  Check,
+  Copy,
+  Crown,
+  Edit2,
+  Image as ImageIcon,
+  Loader2,
+  MoreVertical,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface Product {
   id: string;
@@ -80,12 +83,17 @@ interface EditingRow {
 
 export default function Products() {
   const { companyId } = useCompanyContext();
-  const { planTier } = useSubscription();
-  const imageLimit = getImageLimitForPlan(planTier);
+  const { planTier, hasFeature } = useSubscription();
+  const canImportFromNote = hasFeature('ai_import');
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const productLimit = getProductLimitForPlan(planTier);
+  const productCount = products.length;
+  const isProductLimitReached = productLimit !== null && productCount >= productLimit;
+  const imageLimit = getImageLimitForPlan(planTier);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [blockedImportDialogOpen, setBlockedImportDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
@@ -317,6 +325,24 @@ export default function Products() {
         company_id: companyId
       };
 
+      if (!editingProduct && isProductLimitReached) {
+        toast({
+          title: 'Limite de produtos do plano atingido',
+          description: 'Você não pode adicionar mais produtos no seu plano atual. Faça upgrade para continuar.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!editingProduct && isProductLimitReached) {
+        toast({
+          title: 'Limite de produtos do plano atingido',
+          description: 'Você não pode adicionar mais produtos no seu plano atual. Faça upgrade para continuar.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       if (editingProduct) {
         const { error } = await supabase
           .from('products')
@@ -348,6 +374,15 @@ export default function Products() {
 
   const duplicateProduct = async (product: Product) => {
     if (!companyId) return;
+    if (isProductLimitReached) {
+      toast({
+        title: 'Limite de produtos do plano atingido',
+        description: 'Você não pode duplicar este produto porque já atingiu o limite do seu plano.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const { id, created_at, ...productData } = product;
       const { error } = await supabase
@@ -464,14 +499,39 @@ export default function Products() {
           <Button 
             variant="outline" 
             className="gap-2"
-            onClick={() => setImportDialogOpen(true)}
+            onClick={() => {
+              if (!canImportFromNote) {
+                setBlockedImportDialogOpen(true);
+                return;
+              }
+
+              if (isProductLimitReached) {
+                toast({
+                  title: 'Limite de produtos do plano atingido',
+                  description: 'Você já atingiu o máximo de produtos permitidos pelo seu plano. Faça upgrade para continuar importando produtos da nota.',
+                  variant: 'destructive',
+                });
+                return;
+              }
+
+              setImportDialogOpen(true);
+            }}
           >
             <Camera className="w-4 h-4" />
             Importar da Nota
           </Button>
+          <Dialog open={blockedImportDialogOpen} onOpenChange={setBlockedImportDialogOpen}>
+            <DialogContent className="max-w-lg">
+              <BlockUpgrade/>
+            </DialogContent>
+          </Dialog>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2">
+              <Button
+                className="bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
+                disabled={isProductLimitReached}
+                title={isProductLimitReached ? `Limite de ${productLimit} produtos atingido no plano ${planTier ?? 'atual'}` : ''}
+              >
                 <Plus className="w-4 h-4" />
                 Adicionar Produto
               </Button>
@@ -648,6 +708,29 @@ export default function Products() {
         onSuccess={fetchData}
       />
 
+      {isProductLimitReached && (<Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Crown className="w-5 h-5 text-amber-500" />
+            Plano {planTier ? planTier.charAt(0).toUpperCase() + planTier.slice(1) : '—'}
+          </CardTitle>
+          <CardDescription>
+            {productCount} de {productLimit} produto{productLimit > 1 ? 's' : ''} utilizados
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="w-full bg-muted rounded-full h-2">
+            <div
+              className="bg-primary h-2 rounded-full transition-all"
+              style={{ width: `${Math.min(100, (productCount / productLimit) * 100)}%` }}
+            />
+          </div>
+            <p className="text-sm text-amber-600 mt-3">
+              Você atingiu o limite do seu plano. Faça upgrade para adicionar mais usuários.
+            </p>
+        </CardContent>
+      </Card>)}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -801,7 +884,11 @@ export default function Products() {
                                 <Edit2 className="w-4 h-4 mr-2" />
                                 Editar completo
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => duplicateProduct(product)}>
+                              <DropdownMenuItem
+                                onClick={() => duplicateProduct(product)}
+                                disabled={isProductLimitReached}
+                                title={isProductLimitReached ? 'Limite de produtos do plano atingido' : ''}
+                              >
                                 <Copy className="w-4 h-4 mr-2" />
                                 Duplicar
                               </DropdownMenuItem>
@@ -1003,7 +1090,8 @@ export default function Products() {
                               size="icon"
                               className="h-8 w-8"
                               onClick={() => duplicateProduct(product)}
-                              title="Duplicar"
+                              title={isProductLimitReached ? 'Limite de produtos do plano atingido' : 'Duplicar'}
+                              disabled={isProductLimitReached}
                             >
                               <Copy className="w-4 h-4" />
                             </Button>

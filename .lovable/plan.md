@@ -1,61 +1,44 @@
-## O que está acontecendo
+## Objetivo
+Oferecer **30 dias de teste gratuito** antes da primeira cobrança em todos os planos (Bronze, Prata, Ouro), totalmente integrado ao Stripe — o cartão é coletado no checkout, mas só é cobrado após o término do trial.
 
-Confirmei o seguinte rodando o site publicado e o preview:
+## Como funciona no Stripe
+O Stripe tem suporte nativo a trial via `subscription_data.trial_period_days`. Não precisa criar produto novo nem mudar os price IDs. Características:
 
-- **A landing publicada já está na versão nova** (Ouro com "Melhor escolha", preços 97/167/249, Bronze sem cupons/financeiro). O código em `src/components/landing/PricingSection.tsx` está correto.
-- **As telas novas existem no código e estão registradas no menu** (`/expenses`, `/financial`, `/users` em `AdminLayout.tsx`).
-- **Não há mais `vite-plugin-pwa`** no `package.json` nem nada importando service worker no `src/`. Só sobrou referência em `pnpm-lock.yaml`/`package-lock.json` (inofensivo, não é instalado de fato).
-- O servidor publicado responde:
-  - `GET /sw.js` → **200** (kill-switch atual, OK)
-  - `GET /service-worker.js` → **404** (não tem kill-switch nesse caminho)
+- Cartão é solicitado e validado no checkout (configurável).
+- Nenhum valor é cobrado nos primeiros 30 dias.
+- A subscription nasce com status `trialing` e vira `active` automaticamente na primeira cobrança.
+- Cliente pode cancelar a qualquer momento durante o trial sem ser cobrado.
+- E-mails de "trial terminando em X dias" são enviados pelo Stripe automaticamente (se ativado no dashboard).
 
-Ou seja, o que você está vendo é **cache do navegador no seu dispositivo**, não código antigo no projeto. Existem duas causas combinadas, e vou cobrir as duas:
+## Mudanças necessárias
 
-1. **Service worker fantasma do PWA antigo:** se em algum momento o app registrou SW em `/service-worker.js` (caminho comum do `vite-plugin-pwa`), seu navegador continua servindo o HTML cacheado antigo e o kill-switch atual em `/sw.js` nunca é executado. Sem um kill-switch em `/service-worker.js`, esse SW legado fica preso "para sempre" no seu device.
-2. **Permissões de menu:** se o usuário logado é um funcionário restrito (`user_menu_permissions` com linhas), só aparecem os menus salvos na época da criação. Como Despesas/Financeiro/Usuários são novos, eles ficam escondidos até o dono marcá-los manualmente. Vamos exibir um aviso claro para o dono saber.
-
-## O que vou fazer
-
-### 1. Kill-switch service worker em todos os caminhos comuns
-- Criar `public/service-worker.js` com o mesmo conteúdo de `public/sw.js` (skipWaiting → claim → limpar todos os caches → renavegar clientes com `?sw-cleanup=ts` → `unregister`).
-- Manter `public/sw.js` como já está.
-- Resultado: qualquer device que ainda tenha SW antigo registrado em `/service-worker.js` recebe a versão "auto-destrutiva" no próximo carregamento, limpa o cache e força um reload limpo.
-
-### 2. Reforçar a limpeza no boot do app
-- Em `src/main.tsx`, além do `getRegistrations().unregister()` atual, fazer também:
-  - Se houver qualquer registration ativa, chamar `caches.keys()` + delete em todos.
-  - Após unregister, se detectar que veio de SW (`navigator.serviceWorker.controller`), forçar um `location.reload()` único (com flag em `sessionStorage` para não fazer loop).
-- Isso garante que mesmo quem entrar pela primeira vez depois desta atualização tenha o cache antigo apagado imediatamente.
-
-### 3. Limpeza dos lockfiles
-- Remover `vite-plugin-pwa` e cadeia `workbox-*` que ficaram em `pnpm-lock.yaml` e `package-lock.json` (apenas arquivos de lock; nenhuma alteração de runtime). Mantém o repo coerente com a remoção do PWA.
-
-### 4. Aviso na tela de Usuários para menus novos
-- Em `src/pages/Users.tsx`, ao listar funcionários restritos, se algum deles **não tiver** uma das chaves novas (`expenses`, `financial`, `users`), mostrar um banner: "Há novos menus disponíveis (Despesas, Financeiro, Usuários). Edite o usuário e marque os que ele deve acessar."
-- Isso resolve o caso "fiz login com um funcionário antigo e não aparecem as telas novas".
-
-### 5. Validação
-- Após publicar (você precisa clicar **Publicar → Update** no editor para o frontend ir ao ar), recomendo fazer **hard reload** no seu navegador no domínio publicado: `Ctrl+Shift+R` (Windows) ou `Cmd+Shift+R` (Mac). Em iOS/Android, abrir em aba anônima uma vez para confirmar.
-
-## Detalhes técnicos
-
-```text
-public/
-  sw.js               (já existe - kill-switch)
-  service-worker.js   (NOVO - mesmo conteúdo, cobre o caminho antigo)
-
-src/main.tsx
-  - Mantém unregister + caches.delete
-  - Se controller != null no boot: sessionStorage flag + location.reload() único
+### 1. `supabase/functions/create-checkout/index.ts`
+Adicionar `trial_period_days: 30` dentro de `subscription_data`:
+```ts
+subscription_data: {
+  trial_period_days: 30,
+  metadata: { plan_tier, ...(email && { email }) },
+}
 ```
+Opcional (recomendado): `trial_settings: { end_behavior: { missing_payment_method: 'cancel' } }` para cancelar automaticamente caso o cartão falhe ao final do trial.
 
-Arquivos tocados:
-- `public/service-worker.js` (novo)
-- `src/main.tsx` (reforço de limpeza)
-- `src/pages/Users.tsx` (aviso de menus novos)
-- `pnpm-lock.yaml`, `package-lock.json` (limpeza de entradas órfãs do PWA)
+### 2. `supabase/functions/check-subscription/index.ts` e `provision-company-from-checkout/index.ts`
+Hoje a busca usa `status: "active"`. Durante o trial o status é `"trialing"`, então a empresa não seria provisionada nem reconhecida como ativa. Trocar para aceitar ambos:
+```ts
+status: "all"  // e filtrar no código por ['active','trialing']
+```
+ou listar e filtrar `['trialing','active']`. O `current_period_end` durante o trial já vem como a data do fim do trial — perfeito para mostrar "Teste grátis até DD/MM".
 
-## Fora do escopo
-- Não vou mexer no conteúdo da landing (já está correto).
-- Não vou mexer nas telas de Despesas/Financeiro/Usuários em si (já existem).
-- Não vou reintroduzir nada de PWA.
+### 3. UI — `src/components/landing/PricingSection.tsx` e `src/pages/PostCheckout.tsx`
+- Adicionar selo/texto nos planos: **"30 dias grátis · cancele quando quiser"**.
+- Na tela pós-checkout, mostrar: "Seu teste de 30 dias começou! Primeira cobrança em DD/MM/AAAA."
+
+### 4. (Opcional) Indicador de trial no app
+No header ou Settings, mostrar "Teste grátis — termina em X dias" enquanto `plan_status === 'trialing'`. Pode ficar para uma segunda etapa.
+
+## Pontos a confirmar
+1. **30 dias vale para todos os planos** (Bronze, Prata, Ouro) ou só para alguns?
+2. **Exigir cartão no checkout** (padrão, recomendado — evita abusos e converte melhor) ou permitir trial **sem cartão** (maior conversão de cadastro, mas exige outro fluxo)?
+3. Vale aplicar o trial **apenas para novos clientes**? O Stripe não impede que o mesmo e-mail crie várias contas trial — se isso for preocupação, dá pra adicionar verificação por e-mail/CPF.
+
+Posso seguir com **30 dias em todos os planos, com cartão exigido, cancelamento automático se cartão falhar** como padrão, caso não haja objeção.

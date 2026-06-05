@@ -62,19 +62,24 @@ serve(async (req) => {
     const customerId = customers.data[0].id;
     const subs = await stripe.subscriptions.list({
       customer: customerId,
-      status: "active",
-      limit: 1,
+      status: "all",
+      limit: 10,
     });
 
-    if (subs.data.length === 0) {
-      log("Sem assinatura ativa");
+    const activeOrTrial = subs.data.find(
+      (s) => s.status === "active" || s.status === "trialing"
+    );
+
+    if (!activeOrTrial) {
+      log("Sem assinatura ativa ou em trial");
       return new Response(
         JSON.stringify({ subscribed: false, plan_tier: null, subscription_end: null }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
-    const sub = subs.data[0];
+    const sub = activeOrTrial;
+
     const priceId = sub.items.data[0].price.id;
     const planTier = PRICE_TO_TIER[priceId] ?? null;
     const periodEnd = new Date(sub.current_period_end * 1000).toISOString();

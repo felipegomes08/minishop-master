@@ -106,9 +106,13 @@ export default function PostCheckout() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-6 text-center">
-            Agora é só criar sua conta para acessar o painel.
+          <p className="text-sm text-muted-foreground mb-2 text-center">
+            Seu <strong className="text-emerald-500">teste de 30 dias</strong> começou! Nenhuma cobrança será feita agora.
           </p>
+          <p className="text-xs text-muted-foreground mb-6 text-center">
+            Crie sua conta abaixo para acessar o painel.
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="company">Nome da empresa</Label>

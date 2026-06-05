@@ -127,9 +127,15 @@ export default function PricingSection() {
         <h2 className="text-3xl sm:text-4xl font-bold text-white text-center mb-4">
           Escolha o plano ideal para o seu momento
         </h2>
-        <p className="text-gray-400 text-center max-w-xl mx-auto mb-16">
+        <p className="text-gray-400 text-center max-w-xl mx-auto mb-4">
           Sem taxa de instalação. Cancele quando quiser.
         </p>
+        <div className="flex justify-center mb-16">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-sm font-medium">
+            <Sparkles size={14} /> 30 dias grátis · cobrança só depois do teste
+          </span>
+        </div>
+
 
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
           {plans.map((plan) => (

@@ -58,12 +58,16 @@ serve(async (req) => {
         ...(email && { email }),
       },
       subscription_data: {
+        trial_period_days: 30,
+        trial_settings: {
+          end_behavior: { missing_payment_method: "cancel" },
+        },
         metadata: {
           plan_tier,
           ...(email && { email }),
         },
       },
-    });
+
 
     log("Checkout session criada", { sessionId: session.id });
 

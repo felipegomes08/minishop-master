@@ -52,9 +52,14 @@ serve(async (req) => {
     });
     log("Session recuperada", { sessionId: session.id, status: session.payment_status });
 
-    if (session.payment_status !== "paid") {
+    // Aceita pagamento confirmado OU trial (no_payment_required)
+    if (
+      session.payment_status !== "paid" &&
+      session.payment_status !== "no_payment_required"
+    ) {
       throw new Error("Pagamento não confirmado no Stripe");
     }
+
 
     const subscription = session.subscription as Stripe.Subscription | null;
     if (!subscription) throw new Error("Assinatura não encontrada na sessão");

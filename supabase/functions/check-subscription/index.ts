@@ -9,9 +9,9 @@ const corsHeaders = {
 };
 
 const PRICE_TO_TIER: Record<string, "bronze" | "prata" | "ouro"> = {
-  price_1TN0Z3ErrPM1M4J96bOpdsio: "bronze",
-  price_1TN0ZjErrPM1M4J9wS3XZ66P: "prata",
-  price_1TN0aDErrPM1M4J9iCwgM0Pg: "ouro",
+  price_1TeJb9EyqBvKk747Co0MjbRB: "bronze",
+  price_1TeJb3EyqBvKk747yzJPeatO: "prata",
+  price_1TeJaxEyqBvKk747htNnpVqX: "ouro",
 };
 
 const log = (step: string, details?: unknown) => {

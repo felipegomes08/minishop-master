@@ -155,11 +155,15 @@ export default function PricingSection() {
 
               <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
               <p className="text-sm text-gray-400 mb-4">{plan.description}</p>
-              <div className="flex items-baseline gap-1 mb-6">
+              <div className="flex items-baseline gap-1 mb-2">
                 <span className="text-sm text-gray-400">R$</span>
                 <span className="text-4xl font-bold text-white">{plan.price}</span>
                 <span className="text-sm text-gray-400">/mês</span>
               </div>
+              <p className="text-xs text-emerald-400 mb-6 font-medium">
+                Após 30 dias de teste grátis
+              </p>
+
 
               <button
                 type="button"

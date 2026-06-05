@@ -67,6 +67,9 @@ serve(async (req) => {
           ...(email && { email }),
         },
       },
+    });
+
+
 
 
     log("Checkout session criada", { sessionId: session.id });

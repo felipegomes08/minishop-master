@@ -38,6 +38,7 @@ interface Company {
   slug: string;
   logo_url: string | null;
   primary_color: string | null;
+  secondary_color: string | null;
   whatsapp_number: string | null;
 }
 

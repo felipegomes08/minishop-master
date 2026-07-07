@@ -90,6 +90,7 @@ export function ProductCard({
     <Link to={companySlug ? `/catalogo/${companySlug}/produto/${id}` : `/catalogo/produto/${id}`}>
       <Card className={cn(
         "group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-border/50 h-full",
+        "hover:border-primary/40 hover:ring-2 hover:ring-primary/20",
         isOutOfStock && "opacity-70",
         className
       )}>
@@ -101,9 +102,9 @@ export function ProductCard({
             loading="lazy"
           />
           {categoryName && (
-            <Badge 
-              variant="secondary" 
-              className="absolute top-2 right-2 bg-background/90 text-foreground text-xs"
+            <Badge
+              variant="secondary"
+              className="absolute top-2 right-2 bg-primary/90 text-primary-foreground text-xs backdrop-blur-sm border-0"
             >
               {categoryName}
             </Badge>

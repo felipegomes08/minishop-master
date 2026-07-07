@@ -325,9 +325,16 @@ Poderia me dar mais informações?`;
         {/* Produtos Relacionados */}
         {relatedProducts.length > 0 && (
           <section className="mt-12 lg:mt-16">
-            <h2 className="text-xl font-semibold text-foreground mb-6">
-              Produtos relacionados
-            </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <span
+                className="inline-block h-6 w-1.5 rounded-full"
+                style={{ background: brandGradient }}
+                aria-hidden="true"
+              />
+              <h2 className="text-xl font-semibold text-foreground">
+                Produtos relacionados
+              </h2>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {relatedProducts.map((relProduct) => (
                 <ProductCard

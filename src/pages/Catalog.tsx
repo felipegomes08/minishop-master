@@ -1,5 +1,6 @@
 import { CatalogFooter } from "@/components/catalog/CatalogFooter";
 import { CatalogHeader } from "@/components/catalog/CatalogHeader";
+import { buildBrandCssVars } from "@/lib/colorUtils";
 import {
   CatalogHeaderSkeleton,
   CategoryNavSkeleton,

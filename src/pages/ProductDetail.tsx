@@ -204,8 +204,13 @@ Poderia me dar mais informações?`;
   const images = product.images || [];
   const hasImages = images.length > 0;
 
+  const brandStyle = buildBrandCssVars(company?.primary_color, company?.secondary_color);
+  const primaryColor = company?.primary_color || 'hsl(var(--primary))';
+  const secondaryColor = company?.secondary_color || primaryColor;
+  const brandGradient = `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={brandStyle}>
       {/* Header Simples */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-3">
@@ -230,6 +235,9 @@ Poderia me dar mais informações?`;
           </div>
         </div>
       </header>
+
+      {/* Faixa de acento com cores da marca */}
+      <div className="h-1 w-full" style={{ background: brandGradient }} aria-hidden="true" />
 
       {/* Conteúdo Principal */}
       <main className="container mx-auto px-4 py-6 lg:py-8">

@@ -435,6 +435,7 @@ export default function Catalog() {
         storeName={company?.name}
         whatsappNumber={company?.whatsapp_number}
         primaryColor={company?.primary_color}
+        secondaryColor={company?.secondary_color}
       />
 
       <WhatsAppButton 

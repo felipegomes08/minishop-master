@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useSubscription } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
+import { buildBrandCssVars } from "@/lib/colorUtils";
 import { ArrowLeft, Package, ShoppingCart, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -37,6 +38,7 @@ interface Company {
   slug: string;
   logo_url: string | null;
   primary_color: string | null;
+  secondary_color: string | null;
   whatsapp_number: string | null;
 }
 
@@ -202,8 +204,13 @@ Poderia me dar mais informações?`;
   const images = product.images || [];
   const hasImages = images.length > 0;
 
+  const brandStyle = buildBrandCssVars(company?.primary_color, company?.secondary_color);
+  const primaryColor = company?.primary_color || 'hsl(var(--primary))';
+  const secondaryColor = company?.secondary_color || primaryColor;
+  const brandGradient = `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" style={brandStyle}>
       {/* Header Simples */}
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur">
         <div className="container mx-auto px-4 py-3">
@@ -229,6 +236,9 @@ Poderia me dar mais informações?`;
         </div>
       </header>
 
+      {/* Faixa de acento com cores da marca */}
+      <div className="h-1 w-full" style={{ background: brandGradient }} aria-hidden="true" />
+
       {/* Conteúdo Principal */}
       <main className="container mx-auto px-4 py-6 lg:py-8">
         <div className="grid gap-8 lg:grid-cols-2">
@@ -239,7 +249,10 @@ Poderia me dar mais informações?`;
           <div className="space-y-6">
             {/* Categoria */}
             {category && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge
+                variant="secondary"
+                className="text-xs border bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
+              >
                 {category.name}
               </Badge>
             )}
@@ -312,9 +325,16 @@ Poderia me dar mais informações?`;
         {/* Produtos Relacionados */}
         {relatedProducts.length > 0 && (
           <section className="mt-12 lg:mt-16">
-            <h2 className="text-xl font-semibold text-foreground mb-6">
-              Produtos relacionados
-            </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <span
+                className="inline-block h-6 w-1.5 rounded-full"
+                style={{ background: brandGradient }}
+                aria-hidden="true"
+              />
+              <h2 className="text-xl font-semibold text-foreground">
+                Produtos relacionados
+              </h2>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {relatedProducts.map((relProduct) => (
                 <ProductCard

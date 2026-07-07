@@ -257,8 +257,13 @@ export default function Catalog() {
     );
   }
 
+  const brandStyle = buildBrandCssVars(company?.primary_color, company?.secondary_color);
+  const primaryColor = company?.primary_color || 'hsl(var(--primary))';
+  const secondaryColor = company?.secondary_color || primaryColor;
+  const brandGradient = `linear-gradient(90deg, ${primaryColor}, ${secondaryColor})`;
+
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col" style={brandStyle}>
       <CatalogHeader
         storeName={company?.name || "Catálogo"}
         logoUrl={company?.logo_url}
@@ -266,6 +271,9 @@ export default function Catalog() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
+
+      {/* Brand accent bar */}
+      <div className="h-1 w-full" style={{ background: brandGradient }} aria-hidden="true" />
 
       {/* Banner Carousel ou Hero padrão */}
       {!isSearching && (

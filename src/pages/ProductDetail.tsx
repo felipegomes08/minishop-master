@@ -249,7 +249,10 @@ Poderia me dar mais informações?`;
           <div className="space-y-6">
             {/* Categoria */}
             {category && (
-              <Badge variant="secondary" className="text-xs">
+              <Badge
+                variant="secondary"
+                className="text-xs border bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
+              >
                 {category.name}
               </Badge>
             )}

@@ -373,7 +373,10 @@ export default function Catalog() {
           />
         )}
 
-        <div className="flex items-center justify-between gap-4 py-2 px-4 bg-muted/50 rounded-lg">
+        <div
+          className="flex items-center justify-between gap-4 py-2 px-4 bg-muted/50 rounded-lg border-l-4"
+          style={{ borderLeftColor: primaryColor }}
+        >
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{filteredProducts.length}</span> {filteredProducts.length === 1 ? "produto" : "produtos"}
           </p>

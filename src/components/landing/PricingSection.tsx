@@ -132,7 +132,7 @@ export default function PricingSection() {
         </p>
         <div className="flex justify-center mb-16">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-sm font-medium">
-            <Sparkles size={14} /> 30 dias grátis · cobrança só depois do teste
+            <Sparkles size={14} /> 7 dias grátis · cobrança só depois do teste
           </span>
         </div>
 

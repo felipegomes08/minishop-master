@@ -161,7 +161,7 @@ export default function PricingSection() {
                 <span className="text-sm text-gray-400">/mês</span>
               </div>
               <p className="text-xs text-emerald-400 mb-6 font-medium">
-                Após 30 dias de teste grátis
+                Após 7 dias de teste grátis
               </p>
 
 

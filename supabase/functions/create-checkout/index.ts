@@ -58,7 +58,7 @@ serve(async (req) => {
         ...(email && { email }),
       },
       subscription_data: {
-        trial_period_days: 30,
+        trial_period_days: 7,
         trial_settings: {
           end_behavior: { missing_payment_method: "cancel" },
         },

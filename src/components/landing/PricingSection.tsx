@@ -132,7 +132,7 @@ export default function PricingSection() {
         </p>
         <div className="flex justify-center mb-16">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 text-sm font-medium">
-            <Sparkles size={14} /> 30 dias grátis · cobrança só depois do teste
+            <Sparkles size={14} /> 7 dias grátis · cobrança só depois do teste
           </span>
         </div>
 
@@ -161,7 +161,7 @@ export default function PricingSection() {
                 <span className="text-sm text-gray-400">/mês</span>
               </div>
               <p className="text-xs text-emerald-400 mb-6 font-medium">
-                Após 30 dias de teste grátis
+                Após 7 dias de teste grátis
               </p>
 
 
@@ -180,7 +180,7 @@ export default function PricingSection() {
                     <Loader2 size={16} className="animate-spin" /> Redirecionando...
                   </>
                 ) : (
-                  "Começar 30 dias grátis"
+                  "Começar 7 dias grátis"
                 )}
               </button>
 

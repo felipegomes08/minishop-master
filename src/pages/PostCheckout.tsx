@@ -107,7 +107,7 @@ export default function PostCheckout() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-2 text-center">
-            Seu <strong className="text-emerald-500">teste de 30 dias</strong> começou! Nenhuma cobrança será feita agora.
+            Seu <strong className="text-emerald-500">teste de 7 dias</strong> começou! Nenhuma cobrança será feita agora.
           </p>
           <p className="text-xs text-muted-foreground mb-6 text-center">
             Crie sua conta abaixo para acessar o painel.

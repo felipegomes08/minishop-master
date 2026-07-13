@@ -180,7 +180,7 @@ export default function PricingSection() {
                     <Loader2 size={16} className="animate-spin" /> Redirecionando...
                   </>
                 ) : (
-                  "Começar 30 dias grátis"
+                  "Começar 7 dias grátis"
                 )}
               </button>
 

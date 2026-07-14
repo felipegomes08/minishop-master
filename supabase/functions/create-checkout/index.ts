@@ -8,9 +8,9 @@ const corsHeaders = {
 };
 
 const PRICE_IDS: Record<string, string> = {
-  bronze: "price_1TeJb9EyqBvKk747Co0MjbRB",
-  prata: "price_1TeJb3EyqBvKk747yzJPeatO",
-  ouro: "price_1TeJaxEyqBvKk747htNnpVqX",
+  bronze: "price_1Tt50PEyqBvKk747ippyh6nT",
+  prata: "price_1Tt51rEyqBvKk747aHFviMwK",
+  ouro: "price_1Tt52fEyqBvKk7475EsqAMsb",
 };
 
 const log = (step: string, details?: unknown) => {

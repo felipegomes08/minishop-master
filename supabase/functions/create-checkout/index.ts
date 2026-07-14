@@ -72,7 +72,7 @@ serve(async (req) => {
 
 
 
-    log("Checkout session criada", { sessionId: session.id });
+    log("Checkout session criada", { sessionId: session.id, trial_period_days: 7 });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

@@ -21,6 +21,8 @@ import Expenses from "./pages/Expenses";
 import Financial from "./pages/Financial";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
+import OAuthConsent from "./pages/OAuthConsent";
+
 import PostCheckout from "./pages/PostCheckout";
 import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
@@ -103,6 +105,10 @@ function AppRoutes() {
       {/* Landing Page */}
       <Route path="/landing" element={<Landing />} />
       <Route path="/pos-pagamento" element={<PostCheckout />} />
+
+      {/* Consentimento OAuth (integrações de agentes / MCP) */}
+      <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
       
       {/* Rotas Públicas - Catálogo */}
       <Route path="/catalogo/:slug" element={<Catalog />} />

@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "sdk_version": "0.26.1",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://mbbxaejkwayrkstyrudr.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "lojix",
+      "version": "0.1.0",
+      "title": "Lojix"
+    },
+    "tools": [
+      {
+        "name": "get_store_info",
+        "title": "Informações da loja",
+        "description": "Retorna os dados da loja do usuário autenticado: nome, slug do catálogo, WhatsApp, plano contratado e status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_products",
+        "title": "Listar produtos",
+        "description": "Lista os produtos da loja do usuário autenticado, com preço, custo e estoque. Permite busca por nome.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "description": "Filtro opcional por nome do produto."
+            },
+            "only_active": {
+              "type": "boolean",
+              "description": "Se true, retorna apenas produtos ativos."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Máximo de produtos a retornar (padrão 50)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "low_stock_products",
+        "title": "Produtos com estoque baixo",
+        "description": "Lista os produtos ativos da loja cujo estoque está abaixo de um limite (padrão: 5 unidades).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer",
+              "description": "Limite de estoque considerado baixo (padrão 5)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_customers",
+        "title": "Listar clientes",
+        "description": "Lista os clientes cadastrados na loja do usuário autenticado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "description": "Filtro opcional por nome do cliente."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Máximo de clientes a retornar (padrão 50)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_expenses",
+        "title": "Listar despesas",
+        "description": "Lista as despesas da loja em um período, com título, categoria, valor e data.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Data inicial AAAA-MM-DD."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Data final AAAA-MM-DD."
+            },
+            "category": {
+              "type": "string",
+              "description": "Filtro opcional por categoria."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Máximo de despesas a retornar (padrão 50)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sales_summary",
+        "title": "Resumo de vendas",
+        "description": "Resumo financeiro da loja em um período: total de vendas, receita, despesas, lucro e produtos mais vendidos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Data inicial no formato AAAA-MM-DD."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Data final no formato AAAA-MM-DD."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

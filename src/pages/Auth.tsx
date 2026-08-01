@@ -20,6 +20,9 @@ export default function Auth() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const nextParam = new URLSearchParams(window.location.search).get('next');
+  const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
+
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -84,9 +87,10 @@ export default function Auth() {
             title: 'Bem-vindo, Master Admin!',
             description: 'Login realizado com sucesso.',
           });
-          navigate('/master', { replace: true });
+          navigate(safeNext ?? '/master', { replace: true });
           return;
         }
+
 
         // Check if user is regular admin
         const { data: isAdmin, error: adminError } = await supabase.rpc('has_role', {
@@ -145,7 +149,7 @@ export default function Auth() {
             title: 'Bem-vindo!',
             description: 'Login realizado com sucesso.',
           });
-          navigate('/', { replace: true });
+          navigate(safeNext ?? '/', { replace: true });
         } else {
           toast({
             title: 'Acesso negado',

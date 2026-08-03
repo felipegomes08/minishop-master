@@ -44,14 +44,16 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verificação antes da tentativa de login
+    // Verificação antes da tentativa de login / recuperação de senha
+    const isReset = action === "reset";
     const result = await checkRateLimit({
-      key: LOGIN_KEY,
+      key: isReset ? "reset-password" : LOGIN_KEY,
       identifier,
       ip,
-      max: MAX_ATTEMPTS,
-      windowSeconds: WINDOW_SECONDS,
+      max: isReset ? 3 : MAX_ATTEMPTS,
+      windowSeconds: isReset ? 60 * 60 : WINDOW_SECONDS,
     });
+
 
     if (!result.allowed) {
       console.log("[auth-guard] login bloqueado por rate limit", { ip });

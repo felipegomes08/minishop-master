@@ -204,9 +204,24 @@ export default function Auth() {
     setResetLoading(true);
 
     try {
+      const { data: guard, error: guardError } = await supabase.functions.invoke('auth-guard', {
+        body: { email: resetEmail, action: 'reset' },
+      });
+
+      if (guardError || guard?.allowed === false) {
+        toast({
+          title: 'Muitas solicitações',
+          description: guard?.error ?? 'Muitas solicitações de recuperação. Aguarde alguns minutos e tente novamente.',
+          variant: 'destructive',
+        });
+        setResetLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`
       });
+
 
       if (error) {
         toast({

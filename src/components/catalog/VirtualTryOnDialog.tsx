@@ -351,7 +351,7 @@ export function VirtualTryOnDialog({
               {/* Botão de gerar */}
               <Button 
                 onClick={handleGenerate} 
-                disabled={!userPhoto}
+                disabled={!userPhoto || rateLimited}
                 className="w-full"
                 size="lg"
               >

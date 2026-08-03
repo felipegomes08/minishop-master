@@ -611,6 +611,30 @@ export type Database = {
           },
         ]
       }
+      rate_limit_events: {
+        Row: {
+          created_at: string
+          id: string
+          identifier: string
+          ip: string | null
+          key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          identifier: string
+          ip?: string | null
+          key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          identifier?: string
+          ip?: string | null
+          key?: string
+        }
+        Relationships: []
+      }
       sale_items: {
         Row: {
           created_at: string
@@ -853,6 +877,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          _identifier: string
+          _ip: string
+          _key: string
+          _max: number
+          _window_seconds: number
+        }
+        Returns: Json
+      }
+      cleanup_rate_limit_events: { Args: never; Returns: undefined }
       get_company_user_emails: {
         Args: { _company_id: string; user_ids: string[] }
         Returns: {
@@ -886,6 +921,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      reset_rate_limit: {
+        Args: { _identifier: string; _key: string }
+        Returns: undefined
+      }
       user_belongs_to_company: {
         Args: { _company_id: string; _user_id: string }
         Returns: boolean

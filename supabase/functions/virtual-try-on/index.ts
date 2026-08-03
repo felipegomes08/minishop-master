@@ -1,9 +1,16 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getClientIp, tooManyRequests } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// Limite diário de experimentações por visitante (configurável por variável de ambiente)
+const DAILY_LIMIT = Number(Deno.env.get('TRY_ON_DAILY_LIMIT') ?? '5') || 5;
+const DAY_SECONDS = 24 * 60 * 60;
+// Tamanho máximo aceito por imagem em base64 (~8MB)
+const MAX_IMAGE_CHARS = 8 * 1024 * 1024;
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -20,6 +27,33 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    if (typeof userPhoto !== 'string' || userPhoto.length > MAX_IMAGE_CHARS) {
+      return new Response(
+        JSON.stringify({ error: 'Imagem muito grande. Envie uma foto menor que 8MB.' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Rate limit: N experimentações por dia por visitante (IP)
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit({
+      key: 'virtual-try-on',
+      identifier: ip,
+      ip,
+      max: DAILY_LIMIT,
+      windowSeconds: DAY_SECONDS,
+    });
+
+    if (!rl.allowed) {
+      console.log('[virtual-try-on] limite diário atingido');
+      return tooManyRequests(
+        rl,
+        corsHeaders,
+        `Você atingiu o limite de ${DAILY_LIMIT} experimentações por hoje. Volte amanhã ou fale com a loja pelo WhatsApp.`,
+      );
+    }
+
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

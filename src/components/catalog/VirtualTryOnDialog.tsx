@@ -130,12 +130,21 @@ export function VirtualTryOnDialog({
 
       const data = await response.json();
 
+      if (response.status === 429) {
+        setRateLimited(true);
+        throw new Error(data.error || 'Limite diário de experimentações atingido.');
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao gerar visualização');
       }
 
+      if (typeof data.remaining === 'number') {
+        setRemaining(data.remaining);
+      }
       setGeneratedImage(data.generatedImage);
       setStep('result');
+
     } catch (err) {
       console.error('Erro no virtual try-on:', err);
       setError(err instanceof Error ? err.message : 'Erro ao gerar visualização');

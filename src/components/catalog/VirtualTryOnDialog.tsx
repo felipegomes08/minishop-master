@@ -303,6 +303,15 @@ export function VirtualTryOnDialog({
                 </div>
               )}
 
+              {!rateLimited && remaining !== null && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {remaining > 0
+                    ? `Você ainda tem ${remaining} experimentação${remaining > 1 ? 'ões' : ''} hoje.`
+                    : 'Esta foi sua última experimentação de hoje.'}
+                </p>
+              )}
+
+
               {/* Botões de captura */}
               <div className="grid grid-cols-2 gap-3">
                 <Button

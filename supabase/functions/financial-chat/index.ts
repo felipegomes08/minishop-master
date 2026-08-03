@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { checkRateLimit, getClientIp, tooManyRequests } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +41,17 @@ serve(async (req) => {
       });
     }
     const userId = userData.user.id;
+
+    const rl = await checkRateLimit({
+      key: "financial-chat",
+      identifier: userId,
+      ip: getClientIp(req),
+      max: 30,
+      windowSeconds: 60 * 60,
+    });
+    if (!rl.allowed) {
+      return tooManyRequests(rl, corsHeaders, "Você fez muitas perguntas em pouco tempo. Aguarde alguns minutos.");
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 

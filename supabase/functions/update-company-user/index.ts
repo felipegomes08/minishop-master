@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { checkRateLimit, getClientIp, tooManyRequests } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +38,17 @@ Deno.serve(async (req) => {
       });
     }
     const callerId = userData.user.id;
+
+    const rl = await checkRateLimit({
+      key: "update-company-user",
+      identifier: callerId,
+      ip: getClientIp(req),
+      max: 20,
+      windowSeconds: 60 * 60,
+    });
+    if (!rl.allowed) {
+      return tooManyRequests(rl, corsHeaders, "Muitas operações em pouco tempo. Aguarde alguns minutos.");
+    }
 
     const body = await req.json();
     const { target_user_id, name, email, password, menu_keys } = body as {

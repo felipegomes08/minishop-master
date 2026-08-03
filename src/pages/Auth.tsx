@@ -55,6 +55,21 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      // Rate limit: bloqueia excesso de tentativas antes mesmo de autenticar
+      const { data: guard, error: guardError } = await supabase.functions.invoke('auth-guard', {
+        body: { email, action: 'attempt' },
+      });
+
+      if (guardError || guard?.allowed === false) {
+        toast({
+          title: 'Muitas tentativas',
+          description: guard?.error ?? 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await signIn(email, password);
 
       if (error) {
@@ -70,6 +85,10 @@ export default function Auth() {
         setLoading(false);
         return;
       }
+
+      // Login válido: zera o contador de tentativas
+      supabase.functions.invoke('auth-guard', { body: { email, action: 'success' } });
+
 
       // Check if user is admin
       const { data: { user } } = await supabase.auth.getUser();
@@ -185,9 +204,24 @@ export default function Auth() {
     setResetLoading(true);
 
     try {
+      const { data: guard, error: guardError } = await supabase.functions.invoke('auth-guard', {
+        body: { email: resetEmail, action: 'reset' },
+      });
+
+      if (guardError || guard?.allowed === false) {
+        toast({
+          title: 'Muitas solicitações',
+          description: guard?.error ?? 'Muitas solicitações de recuperação. Aguarde alguns minutos e tente novamente.',
+          variant: 'destructive',
+        });
+        setResetLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/reset-password`
       });
+
 
       if (error) {
         toast({

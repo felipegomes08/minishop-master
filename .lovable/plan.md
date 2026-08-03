@@ -1,37 +1,42 @@
-## Diagnóstico
+## Contexto
 
-A URL que dá 404 é `https://minishop-master.vercel.app/catalogo/shine-pratas` — ou seja, o app foi publicado na **Vercel**, não no Lovable.
+O backend não oferece rate limiting nativo. Vamos construir um mecanismo próprio: uma tabela de contadores no banco + verificação nas edge functions. É eficaz contra abuso comum (scripts, spam, força bruta simples), mas não substitui um WAF: quem trocar de IP consegue contornar parcialmente. Por isso combinamos IP + identificador (e-mail ou empresa).
 
-O código em si está correto: o botão "Ver catálogo" em `src/pages/Settings.tsx:332` (e o equivalente em `src/pages/master/MasterCompanies.tsx:452`) usa caminho relativo `/catalogo/${slug}`, que funciona em qualquer domínio. Não há URL fixa do Lovable em nenhuma rota interna do app.
+## Estratégia
 
-**A causa do 404 é hospedagem, não código.** A Vercel, por padrão, em projetos Vite, tenta servir um arquivo físico em `/catalogo/shine-pratas` — esse arquivo não existe (é uma rota client-side do React Router), então retorna 404. O Lovable resolve isso automaticamente; a Vercel precisa de configuração explícita (SPA fallback).
+Um único "motor" de rate limit reutilizável, em vez de lógica espalhada:
 
-Esse mesmo problema vai acontecer em **toda** rota acessada diretamente ou recarregada (F5) na Vercel: `/products`, `/sales`, `/catalogo/:slug/produto/:id`, `/reset-password`, `/pos-pagamento`, `/master/*`, etc. Você só não notou ainda porque navegou pelo menu interno.
+1. Tabela `rate_limit_events` (chave, identificador, ip, timestamp), sem acesso para `anon`/`authenticated` — só `service_role` (edge functions) grava e lê.
+2. Função no banco `check_rate_limit(_key, _identifier, _ip, _max, _window_seconds)` que conta eventos na janela, registra a tentativa e devolve `{allowed, remaining, retry_after}`. Tudo em uma chamada, atômico.
+3. Limpeza automática de registros antigos (job diário) para a tabela não crescer.
 
-## Correção
+## Onde aplicar
 
-Criar `vercel.json` na raiz do projeto com uma regra de rewrite que mande qualquer rota não-arquivo para `index.html`, deixando o React Router resolver:
+| Endpoint | Limite | Chave |
+|---|---|---|
+| Login | 5 tentativas / 15 min | e-mail + IP |
+| Recuperar senha (`reset-password`) | 3 / hora | e-mail + IP |
+| Experimentador virtual (`virtual-try-on`) | configurável por env var, padrão 5 / dia | IP (+ empresa) |
+| Chat financeiro (`financial-chat`) | 30 / hora | usuário |
+| Extrair produtos da foto / despesa do recibo | 20 / hora | usuário |
+| Criar checkout | 10 / hora | IP |
+| Criar/editar/excluir usuário da empresa | 20 / hora | usuário |
 
-```json
-{
-  "rewrites": [
-    { "source": "/((?!assets/|.*\\..*).*)", "destination": "/index.html" }
-  ]
-}
-```
+### Login
+Como o login é feito direto pelo cliente, criamos uma edge function `auth-guard` chamada **antes** do `signInWithPassword`: ela verifica o limite e, se estourado, a tela de login mostra "Muitas tentativas. Tente novamente em X minutos" sem sequer chamar a autenticação. Após um login bem-sucedido, o contador daquele e-mail é zerado. Só tentativas falhas contam de fato.
 
-A regex exclui:
-- `assets/...` (arquivos buildados pelo Vite)
-- qualquer caminho com extensão (`.js`, `.css`, `.png`, `.svg`, `robots.txt`, `sw.js`, etc.)
+### Experimentador virtual
+- Limite diário lido de `TRY_ON_DAILY_LIMIT` (variável de ambiente configurável, padrão 5).
+- Ao atingir, a função devolve `429` com mensagem amigável, e o diálogo mostra "Você atingiu o limite de X experimentações hoje. Volte amanhã ou fale com a loja no WhatsApp".
+- Contador visível no diálogo ("3 de 5 experimentações restantes hoje") para o usuário entender antes de gastar.
+- Validações adicionais: tamanho máximo da imagem enviada (evita payloads gigantes) e verificação de que o produto pertence a uma empresa ativa.
 
-Assim assets continuam sendo servidos diretamente, e qualquer rota tipo `/catalogo/shine-pratas` cai no `index.html` e o React Router assume.
+## Detalhes técnicos
 
-## Passos
-
-1. Criar `vercel.json` na raiz com o conteúdo acima.
-2. Fazer commit/push para o repositório conectado à Vercel — ela redeploya automaticamente.
-3. Testar: abrir `https://minishop-master.vercel.app/catalogo/shine-pratas` direto na barra do navegador e recarregar `/products` logado.
-
-## Observação adicional
-
-Como você tem **domínio personalizado próprio** e quer hospedar fora do Lovable, a Vercel é uma escolha válida — só precisa desse `vercel.json`. Alternativamente, dá para apontar o domínio para o Lovable (DNS A → 185.158.133.1) e usar o publish nativo, que já tem SPA fallback embutido e não exige configuração extra. As duas abordagens funcionam; é só uma decisão de onde você quer manter o deploy.
+- Nova migração: tabela `rate_limit_events` com índice em (`key`, `identifier`, `created_at`), GRANTs apenas para `service_role`, RLS habilitado sem políticas públicas.
+- `check_rate_limit` como função `SECURITY DEFINER` com `search_path = public`.
+- Helper compartilhado `supabase/functions/_shared/rate-limit.ts` usado por todas as funções, com extração de IP via `x-forwarded-for`.
+- Respostas `429` sempre com `Retry-After` e mensagem em pt-BR, mantendo os headers de CORS.
+- Nova função `auth-guard` (`verify_jwt = false`) e ajuste em `src/pages/Auth.tsx` (login e recuperação de senha).
+- Ajustes em `VirtualTryOnDialog.tsx` para exibir contagem restante e mensagem de bloqueio.
+- Nenhuma alteração de layout ou de regras de negócio existentes.

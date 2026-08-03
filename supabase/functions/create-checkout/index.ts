@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { checkRateLimit, getClientIp, tooManyRequests } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,18 @@ serve(async (req) => {
   }
 
   try {
+    const checkoutIp = getClientIp(req);
+    const rl = await checkRateLimit({
+      key: "create-checkout",
+      identifier: checkoutIp,
+      ip: checkoutIp,
+      max: 10,
+      windowSeconds: 60 * 60,
+    });
+    if (!rl.allowed) {
+      return tooManyRequests(rl, corsHeaders, "Muitas tentativas de checkout. Aguarde alguns minutos e tente novamente.");
+    }
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY não configurada");
 

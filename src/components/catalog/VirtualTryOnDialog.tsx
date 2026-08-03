@@ -46,6 +46,9 @@ export function VirtualTryOnDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImageIndex, setZoomImageIndex] = useState(0);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
+
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -130,12 +133,21 @@ export function VirtualTryOnDialog({
 
       const data = await response.json();
 
+      if (response.status === 429) {
+        setRateLimited(true);
+        throw new Error(data.error || 'Limite diário de experimentações atingido.');
+      }
+
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao gerar visualização');
       }
 
+      if (typeof data.remaining === 'number') {
+        setRemaining(data.remaining);
+      }
       setGeneratedImage(data.generatedImage);
       setStep('result');
+
     } catch (err) {
       console.error('Erro no virtual try-on:', err);
       setError(err instanceof Error ? err.message : 'Erro ao gerar visualização');
@@ -291,6 +303,15 @@ export function VirtualTryOnDialog({
                 </div>
               )}
 
+              {!rateLimited && remaining !== null && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {remaining > 0
+                    ? `Você ainda tem ${remaining} experimentação${remaining > 1 ? 'ões' : ''} hoje.`
+                    : 'Esta foi sua última experimentação de hoje.'}
+                </p>
+              )}
+
+
               {/* Botões de captura */}
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -330,7 +351,7 @@ export function VirtualTryOnDialog({
               {/* Botão de gerar */}
               <Button 
                 onClick={handleGenerate} 
-                disabled={!userPhoto}
+                disabled={!userPhoto || rateLimited}
                 className="w-full"
                 size="lg"
               >

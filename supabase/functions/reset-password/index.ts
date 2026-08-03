@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { checkRateLimit, getClientIp, tooManyRequests } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +31,19 @@ serve(async (req: Request): Promise<Response> => {
         JSON.stringify({ error: "Email é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    const ip = getClientIp(req);
+    const rl = await checkRateLimit({
+      key: "reset-password",
+      identifier: `${String(email).toLowerCase()}|${ip}`,
+      ip,
+      max: 3,
+      windowSeconds: 60 * 60,
+    });
+    if (!rl.allowed) {
+      console.log("[reset-password] limite atingido");
+      return tooManyRequests(rl, corsHeaders, "Muitas solicitações de recuperação de senha. Tente novamente mais tarde.");
     }
 
     console.log("Iniciando reset de senha para:", email);

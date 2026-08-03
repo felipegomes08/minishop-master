@@ -142,10 +142,13 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         generatedImage,
-        message: 'Visualização gerada com sucesso!'
+        message: 'Visualização gerada com sucesso!',
+        remaining: rl.remaining,
+        dailyLimit: DAILY_LIMIT
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
+
 
   } catch (error) {
     console.error('Erro no virtual-try-on:', error);

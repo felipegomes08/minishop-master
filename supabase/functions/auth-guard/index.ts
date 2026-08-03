@@ -54,16 +54,17 @@ serve(async (req: Request): Promise<Response> => {
       windowSeconds: isReset ? 60 * 60 : WINDOW_SECONDS,
     });
 
-
     if (!result.allowed) {
-      console.log("[auth-guard] login bloqueado por rate limit", { ip });
+      console.log("[auth-guard] bloqueado por rate limit", { ip, action });
       return new Response(
         JSON.stringify({
           allowed: false,
           retry_after: result.retryAfter,
-          error:
-            `Muitas tentativas de login. Tente novamente em ${formatRetryAfter(result.retryAfter)}.`,
+          error: isReset
+            ? `Muitas solicitações de recuperação de senha. Tente novamente em ${formatRetryAfter(result.retryAfter)}.`
+            : `Muitas tentativas de login. Tente novamente em ${formatRetryAfter(result.retryAfter)}.`,
         }),
+
         {
           status: 429,
           headers: {

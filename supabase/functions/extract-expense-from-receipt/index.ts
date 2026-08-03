@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getClientIp, tooManyRequests } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,6 +40,18 @@ serve(async (req) => {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const receiptIp = getClientIp(req);
+    const rl = await checkRateLimit({
+      key: "extract-expense",
+      identifier: receiptIp,
+      ip: receiptIp,
+      max: 20,
+      windowSeconds: 60 * 60,
+    });
+    if (!rl.allowed) {
+      return tooManyRequests(rl, corsHeaders, "Muitas leituras de comprovante em pouco tempo. Aguarde alguns minutos.");
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

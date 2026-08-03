@@ -46,6 +46,9 @@ export function VirtualTryOnDialog({
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoomModalOpen, setZoomModalOpen] = useState(false);
   const [zoomImageIndex, setZoomImageIndex] = useState(0);
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
+
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);

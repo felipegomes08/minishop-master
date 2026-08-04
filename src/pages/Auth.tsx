@@ -86,8 +86,15 @@ export default function Auth() {
         return;
       }
 
-      // Login válido: zera o contador de tentativas
-      supabase.functions.invoke('auth-guard', { body: { email, action: 'success' } });
+      // Login válido: zera o contador de tentativas (exige sessão válida)
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (freshSession?.access_token) {
+        supabase.functions.invoke('auth-guard', {
+          body: { email, action: 'success' },
+          headers: { Authorization: `Bearer ${freshSession.access_token}` },
+        });
+      }
+
 
 
       // Check if user is admin

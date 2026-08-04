@@ -37,14 +37,38 @@ serve(async (req: Request): Promise<Response> => {
     const ip = getClientIp(req);
     const identifier = `${email}|${ip}`;
 
-    // Login bem-sucedido: zera o contador
+    // Login bem-sucedido: zera o contador APENAS com sessão válida do próprio e-mail
     if (action === "success") {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
+      let tokenEmail = "";
+      if (token && token !== anonKey) {
+        const supabase = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
+        const { data, error } = await supabase.auth.getClaims(token);
+        if (!error) {
+          tokenEmail = String(data?.claims?.email ?? "").trim().toLowerCase();
+        }
+      }
+
+      if (!tokenEmail || tokenEmail !== email) {
+        console.log("[auth-guard] reset de contador negado: sessão inválida");
+        return new Response(
+          JSON.stringify({ error: "Não autorizado" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       await resetRateLimit(LOGIN_KEY, identifier);
       return new Response(
         JSON.stringify({ ok: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
 
     // Verificação antes da tentativa de login / recuperação de senha
     const isReset = action === "reset";

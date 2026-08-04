@@ -1,45 +1,29 @@
-# Checkup de segurança — resultado e correções propostas
+# Correção das 3 brechas de segurança
 
-## O que está OK (verificado)
+## 1. Recuperação de senha por link (hoje qualquer um derruba a senha de qualquer conta)
 
-- Nenhuma chave secreta no código do frontend: não há `sk_live/sk_test`, service role key, chave Resend ou chave Google no `src/`.
-- Todas as funções de backend leem segredos via variáveis de ambiente (`Deno.env.get`), nunca hardcoded.
-- O `.env` do projeto contém apenas valores públicos por design (URL do backend, chave publicável e número de suporte) — esses são feitos para rodar no navegador e são protegidos por RLS.
-- Os IDs de preço do Stripe (`price_...`) no backend são identificadores públicos, não segredos.
-- Rate limit já ativo em login, recuperação de senha, provador virtual, chat financeiro, importação por foto e checkout.
+Hoje o sistema gera uma senha temporária e **substitui a senha atual** de quem for informado no formulário. Basta saber o e-mail para bloquear o acesso de qualquer pessoa, inclusive o super admin.
 
-## Problemas encontrados (por prioridade)
+Novo comportamento: o e-mail passa a conter um **link de redefinição com validade**. A senha só muda quando a pessoa abre o link e define a nova senha na tela `/reset-password`, que já existe. A resposta continua genérica (não revela se o e-mail existe) e o limite de 3 pedidos por hora é mantido.
 
-### 1. Escalada de privilégio em permissões de menu (crítico)
-A política de `user_menu_permissions` usa a checagem de admin global em vez da checagem de admin **por empresa**. Um usuário com marcação de admin global que pertença a uma empresa pode alterar permissões de menu daquela empresa mesmo sem ser admin dela.
-Correção: trocar a checagem global pela checagem escopada por empresa na política.
+## 2. Bloqueio de tentativas de login à prova de bypass
 
-### 2. Bypass do bloqueio de tentativas de login (alto)
-A função `auth-guard` aceita a ação `success` sem qualquer prova de que o login realmente ocorreu. Qualquer pessoa pode chamar essa ação e zerar o contador de tentativas, anulando o limite de 5 tentativas por 15 minutos (força bruta).
-Correção: só zerar o contador quando a chamada vier com um token de sessão válido do próprio e-mail informado (validação do JWT dentro da função).
+A função de guarda do login aceita hoje um aviso de "login concluído" sem qualquer verificação, e esse aviso zera o contador de tentativas. Qualquer pessoa pode chamá-lo e tentar senhas infinitamente.
 
-### 3. Recuperação de senha troca a senha do usuário (alto)
-A função `reset-password` gera uma senha temporária e **sobrescreve a senha atual** de quem for informado. Isso permite que um terceiro derrube o acesso de qualquer usuário só sabendo o e-mail (3x por hora).
-Correção: enviar um link de redefinição (link de recuperação gerado pelo backend, que expira) em vez de trocar a senha; a senha só muda quando a pessoa abre o link e define a nova senha na tela `/reset-password`, que já existe.
+Novo comportamento: o contador só é zerado quando a chamada apresenta uma sessão válida do próprio e-mail informado. Sem isso, o bloqueio de 5 tentativas por 15 minutos passa a valer de verdade.
 
-### 4. Política de upload de imagens no papel `public` (médio)
-A política de upload no bucket de imagens de produto está aplicada ao papel `public` em vez de `authenticated`. A checagem interna hoje já barra anônimos, mas o escopo correto evita depender só disso.
-Correção: recriar a política restrita a `authenticated`.
+## 3. Permissões de menu escopadas por empresa
 
-### 5. CORS aberto (`*`) em todas as funções (médio)
-Todas as funções aceitam qualquer origem. Para as funções autenticadas isso facilita abuso a partir de sites de terceiros.
-Correção: restringir a origem às URLs oficiais (domínio publicado, domínio personalizado e preview), mantendo `*` apenas nas rotas realmente públicas (catálogo/provador).
+A regra de acesso de `user_menu_permissions` verifica se a pessoa é admin no geral, e não se é admin **daquela** empresa. Alguém com marcação de admin global e vínculo com uma empresa consegue alterar permissões dela sem ser admin.
 
-### 6. Número de suporte global exposto a qualquer usuário logado (baixo)
-`get-support-number` usa a chave de serviço e devolve o número da configuração global para qualquer usuário autenticado. Baixo impacto, mas vale limitar o retorno e manter o log limpo.
+Novo comportamento: a verificação passa a ser por empresa, alinhada às demais tabelas do sistema.
 
 ## Detalhes técnicos
 
-- Migração de banco: recriar política de `user_menu_permissions` usando `has_company_role(auth.uid(), company_id, 'admin')`; recriar a política de upload em `storage.objects` com `TO authenticated`.
-- `supabase/functions/auth-guard/index.ts`: validar o JWT no `Authorization` (com a chave publicável) antes de aceitar `action: "success"`, e conferir se o e-mail do token bate com o e-mail enviado.
-- `supabase/functions/reset-password/index.ts`: substituir `updateUserById({ password })` por `auth.admin.generateLink({ type: 'recovery' })` e enviar o link no e-mail; manter o mesmo rate limit e a resposta genérica que não revela se o e-mail existe.
-- Cabeçalhos CORS: criar helper compartilhado em `supabase/functions/_shared/cors.ts` com lista de origens permitidas e aplicar nas funções autenticadas.
-- Ao final: rodar o linter do banco e o scanner de segurança para confirmar que os apontamentos foram fechados, e marcar os achados como resolvidos.
+- `supabase/functions/reset-password/index.ts`: trocar `auth.admin.updateUserById({ password })` por `auth.admin.generateLink({ type: 'recovery', redirectTo: <origin>/reset-password })` e enviar o link no e-mail (mesmo layout, Resend). Manter rate limit e resposta genérica. `ResetPassword.tsx` já trata a sessão de recuperação — sem mudanças de layout.
+- `supabase/functions/auth-guard/index.ts`: na ação `success`, validar o JWT do header `Authorization` via `auth.getClaims` e conferir se o e-mail do token bate com o e-mail enviado antes de chamar `resetRateLimit`. `src/pages/Auth.tsx` passa a enviar o token da sessão recém-criada nessa chamada.
+- Migração: recriar a política "Company admins can manage menu permissions of their company" usando `has_company_role(auth.uid(), company_id, 'admin'::app_role)` no lugar de `has_role(auth.uid(), 'admin')`.
+- Depois: redeploy das duas funções, teste do fluxo de login e de recuperação, e nova execução do scanner para confirmar o fechamento dos achados.
 
 ## Fora de escopo
-Nenhuma mudança visual ou de fluxo de uso, exceto a tela de recuperação de senha, que passa a receber um link em vez de senha temporária.
+CORS restrito por origem e a política de upload no papel `public` (itens médios do relatório) ficam para depois, conforme sua escolha.

@@ -12,9 +12,6 @@ verify_jwt = true
 [functions.virtual-try-on]
 verify_jwt = false
 
-[functions.reset-password]
-verify_jwt = false
-
 [functions.create-checkout]
 verify_jwt = false
 

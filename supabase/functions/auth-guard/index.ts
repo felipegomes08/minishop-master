@@ -48,10 +48,11 @@ serve(async (req: Request): Promise<Response> => {
         const supabase = createClient(Deno.env.get("SUPABASE_URL")!, anonKey, {
           auth: { autoRefreshToken: false, persistSession: false },
         });
-        const { data, error } = await supabase.auth.getClaims(token);
+        const { data, error } = await supabase.auth.getUser(token);
         if (!error) {
-          tokenEmail = String(data?.claims?.email ?? "").trim().toLowerCase();
+          tokenEmail = String(data?.user?.email ?? "").trim().toLowerCase();
         }
+
       }
 
       if (!tokenEmail || tokenEmail !== email) {

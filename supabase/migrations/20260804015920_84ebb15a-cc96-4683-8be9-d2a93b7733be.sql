@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Company admins can manage menu permissions of their company" ON public.user_menu_permissions;

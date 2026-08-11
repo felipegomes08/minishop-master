@@ -15,6 +15,11 @@ import FinalCTASection from "@/components/landing/FinalCTASection";
 import LandingFooter from "@/components/landing/LandingFooter";
 
 export default function Landing() {
+  useEffect(() => {
+    initPixel();
+    trackPageView();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#0a0e1a]">
       <LandingHeader />

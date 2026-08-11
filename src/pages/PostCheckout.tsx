@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { initPixel, trackEvent, trackPageView } from "@/lib/fbPixel";
 
 const PLAN_LABELS: Record<string, string> = {
   bronze: "Bronze",
@@ -31,6 +32,23 @@ export default function PostCheckout() {
       navigate("/landing#precos");
     }
   }, [sessionId, navigate]);
+
+  useEffect(() => {
+    initPixel();
+    trackPageView();
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const key = `fb_purchase_${sessionId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    trackEvent("Purchase", {
+      content_name: PLAN_LABELS[plan] || plan || "plano",
+      currency: "BRL",
+      value: 0,
+    });
+  }, [sessionId, plan]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

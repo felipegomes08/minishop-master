@@ -2,6 +2,7 @@ import { Check, X, Crown, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useScrollReveal } from "./useScrollReveal";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/fbPixel";
 
 interface Feature {
   text: string;
@@ -82,6 +83,7 @@ export default function PricingSection() {
 
   const handleSubscribe = async (tier: "bronze" | "prata" | "ouro") => {
     setLoadingTier(tier);
+    trackEvent("InitiateCheckout", { content_name: tier, content_category: "plano" });
     try {
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const response = await fetch(

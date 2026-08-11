@@ -2,6 +2,7 @@ import { Check, X, Crown, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useScrollReveal } from "./useScrollReveal";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/fbPixel";
 
 interface Feature {
   text: string;

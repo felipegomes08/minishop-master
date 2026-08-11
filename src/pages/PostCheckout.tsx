@@ -33,6 +33,23 @@ export default function PostCheckout() {
     }
   }, [sessionId, navigate]);
 
+  useEffect(() => {
+    initPixel();
+    trackPageView();
+  }, []);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const key = `fb_purchase_${sessionId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    trackEvent("Purchase", {
+      content_name: PLAN_LABELS[plan] || plan || "plano",
+      currency: "BRL",
+      value: 0,
+    });
+  }, [sessionId, plan]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!companyName.trim() || !email.trim() || password.length < 6) {

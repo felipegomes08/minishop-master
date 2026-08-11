@@ -1,37 +1,51 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lojix - Gestão inteligente para sua loja</title>
-    <meta name="description" content="Sistema completo de gestão com IA integrada para lojas de moda, joias, calçados e acessórios." />
-    <meta name="author" content="Lojix" />
 
-    <link rel="icon" href="/favicon.png" type="image/svg+xml" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lojix - Gestão inteligente para sua loja</title>
+  <meta name="description"
+    content="Sistema completo de gestão com IA integrada para lojas de moda, joias, calçados e acessórios." />
+  <meta name="author" content="Lojix" />
 
-    <!-- Open Graph -->
-    <meta property="og:title" content="Lojix - Gestão inteligente para sua loja" />
-    <meta property="og:description" content="Sistema completo de gestão com IA integrada para lojas de moda, joias, calçados e acessórios." />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  <link rel="icon" href="/favicon.png" type="image/svg+xml" />
 
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@shine925" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
-  </head>
+  <!-- Open Graph -->
+  <meta property="og:title" content="Lojix - Gestão inteligente para sua loja" />
+  <meta property="og:description"
+    content="Sistema completo de gestão com IA integrada para lojas de moda, joias, calçados e acessórios." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
 
-  <body>
-    <div id="root"></div>
-    <!-- Meta Pixel fallback (noscript) -->
-    <noscript
-      ><img
-        height="1"
-        width="1"
-        style="display: none"
-        alt=""
-        src="https://www.facebook.com/tr?id=1589201359225793&ev=PageView&noscript=1"
-    /></noscript>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@shine925" />
+  <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+</head>
+
+<body>
+  <div id="root"></div>
+  <!-- Meta Pixel Code -->
+  <script>
+    !function (f, b, e, v, n, t, s) {
+      if (f.fbq) return; n = f.fbq = function () {
+        n.callMethod ?
+        n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+      };
+      if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0';
+      n.queue = []; t = b.createElement(e); t.async = !0;
+      t.src = v; s = b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t, s)
+    }(window, document, 'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1589201359225793');
+    fbq('track', 'PageView');
+  </script>
+  <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=1589201359225793&ev=PageView&noscript=1" /></noscript>
+  <!-- End Meta Pixel Code -->
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { initPixel, trackPageView } from "@/lib/fbPixel";
 import LandingHeader from "@/components/landing/LandingHeader";
 import HeroSection from "@/components/landing/HeroSection";
 import ProblemSolutionSection from "@/components/landing/ProblemSolutionSection";

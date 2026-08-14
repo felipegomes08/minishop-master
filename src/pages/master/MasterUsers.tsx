@@ -91,6 +91,57 @@ export default function MasterUsers() {
     role: 'admin' as 'admin' | 'user'
   });
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createData, setCreateData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    company_id: '',
+    role: 'admin' as 'admin' | 'user',
+  });
+
+  function resetCreateForm() {
+    setCreateData({ name: '', email: '', password: '', company_id: '', role: 'admin' });
+  }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!createData.name.trim()) return toast.error('Nome é obrigatório');
+    if (!createData.email.trim()) return toast.error('E-mail é obrigatório');
+    if (createData.password.length < 8) return toast.error('Senha deve ter no mínimo 8 caracteres');
+    if (!createData.company_id) return toast.error('Selecione uma empresa');
+
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user-superadmin', {
+        body: {
+          name: createData.name.trim(),
+          email: createData.email.trim(),
+          password: createData.password,
+          company_id: createData.company_id,
+          role: createData.role,
+        },
+      });
+
+      const errMsg = (data as any)?.error;
+      if (error || errMsg) {
+        toast.error(errMsg || 'Erro ao criar usuário');
+        return;
+      }
+
+      toast.success('Usuário criado e vinculado à empresa!');
+      setCreateOpen(false);
+      resetCreateForm();
+      fetchData();
+    } catch (err) {
+      console.error('Erro ao criar usuário:', err);
+      toast.error('Erro ao criar usuário');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
   useEffect(() => {
     fetchData();
   }, []);

@@ -37,7 +37,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Plus, Search, Shield, Trash2, Users } from 'lucide-react';
+import { Building2, Plus, Search, Shield, Trash2, UserPlus, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 

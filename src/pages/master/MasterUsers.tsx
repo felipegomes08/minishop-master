@@ -431,28 +431,31 @@ export default function MasterUsers() {
               Vínculos entre usuários e empresas
             </CardDescription>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              resetForm();
-              setDialogType('company_user');
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Vincular
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              resetCreateForm();
-              setCreateOpen(true);
-            }}
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Criar usuário
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                setDialogType('company_user');
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Vincular
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                resetCreateForm();
+                setCreateOpen(true);
+              }}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Criar usuário
+            </Button>
+          </div>
+
 
         </CardHeader>
         <CardContent>

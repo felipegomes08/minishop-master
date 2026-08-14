@@ -642,6 +642,102 @@ export default function MasterUsers() {
         </DialogContent>
       </Dialog>
 
+      {/* Create User Dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetCreateForm(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Usuário</DialogTitle>
+            <DialogDescription>
+              Cria um usuário do zero já vinculado a uma empresa
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new_name">Nome *</Label>
+              <Input
+                id="new_name"
+                value={createData.name}
+                onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
+                placeholder="Nome do usuário"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_email">E-mail *</Label>
+              <Input
+                id="new_email"
+                type="email"
+                value={createData.email}
+                onChange={(e) => setCreateData({ ...createData, email: e.target.value })}
+                placeholder="email@empresa.com"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_password">Senha *</Label>
+              <Input
+                id="new_password"
+                type="password"
+                value={createData.password}
+                onChange={(e) => setCreateData({ ...createData, password: e.target.value })}
+                placeholder="Mínimo 8 caracteres"
+                minLength={8}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_company">Empresa *</Label>
+              <Select
+                value={createData.company_id}
+                onValueChange={(value) => setCreateData({ ...createData, company_id: value })}
+              >
+                <SelectTrigger id="new_company">
+                  <SelectValue placeholder="Selecione uma empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_role">Papel</Label>
+              <Select
+                value={createData.role}
+                onValueChange={(value: 'admin' | 'user') => setCreateData({ ...createData, role: value })}
+              >
+                <SelectTrigger id="new_role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="user">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Criando...' : 'Criar usuário'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+
+
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

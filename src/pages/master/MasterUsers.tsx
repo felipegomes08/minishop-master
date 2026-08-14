@@ -433,6 +433,7 @@ export default function MasterUsers() {
           </div>
           <Button
             size="sm"
+            variant="outline"
             onClick={() => {
               resetForm();
               setDialogType('company_user');
@@ -442,6 +443,17 @@ export default function MasterUsers() {
             <Plus className="w-4 h-4 mr-2" />
             Vincular
           </Button>
+          <Button
+            size="sm"
+            onClick={() => {
+              resetCreateForm();
+              setCreateOpen(true);
+            }}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Criar usuário
+          </Button>
+
         </CardHeader>
         <CardContent>
           {/* Search */}

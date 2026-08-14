@@ -37,7 +37,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Plus, Search, Shield, Trash2, Users } from 'lucide-react';
+import { Building2, Plus, Search, Shield, Trash2, UserPlus, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -90,6 +90,57 @@ export default function MasterUsers() {
     company_id: '',
     role: 'admin' as 'admin' | 'user'
   });
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createData, setCreateData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    company_id: '',
+    role: 'admin' as 'admin' | 'user',
+  });
+
+  function resetCreateForm() {
+    setCreateData({ name: '', email: '', password: '', company_id: '', role: 'admin' });
+  }
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!createData.name.trim()) return toast.error('Nome é obrigatório');
+    if (!createData.email.trim()) return toast.error('E-mail é obrigatório');
+    if (createData.password.length < 8) return toast.error('Senha deve ter no mínimo 8 caracteres');
+    if (!createData.company_id) return toast.error('Selecione uma empresa');
+
+    setSaving(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-user-superadmin', {
+        body: {
+          name: createData.name.trim(),
+          email: createData.email.trim(),
+          password: createData.password,
+          company_id: createData.company_id,
+          role: createData.role,
+        },
+      });
+
+      const errMsg = (data as any)?.error;
+      if (error || errMsg) {
+        toast.error(errMsg || 'Erro ao criar usuário');
+        return;
+      }
+
+      toast.success('Usuário criado e vinculado à empresa!');
+      setCreateOpen(false);
+      resetCreateForm();
+      fetchData();
+    } catch (err) {
+      console.error('Erro ao criar usuário:', err);
+      toast.error('Erro ao criar usuário');
+    } finally {
+      setSaving(false);
+    }
+  }
+
 
   useEffect(() => {
     fetchData();
@@ -380,17 +431,32 @@ export default function MasterUsers() {
               Vínculos entre usuários e empresas
             </CardDescription>
           </div>
-          <Button
-            size="sm"
-            onClick={() => {
-              resetForm();
-              setDialogType('company_user');
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Vincular
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                setDialogType('company_user');
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Vincular
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                resetCreateForm();
+                setCreateOpen(true);
+              }}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Criar usuário
+            </Button>
+          </div>
+
+
         </CardHeader>
         <CardContent>
           {/* Search */}
@@ -575,6 +641,102 @@ export default function MasterUsers() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={createOpen} onOpenChange={(open) => { setCreateOpen(open); if (!open) resetCreateForm(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Usuário</DialogTitle>
+            <DialogDescription>
+              Cria um usuário do zero já vinculado a uma empresa
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new_name">Nome *</Label>
+              <Input
+                id="new_name"
+                value={createData.name}
+                onChange={(e) => setCreateData({ ...createData, name: e.target.value })}
+                placeholder="Nome do usuário"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_email">E-mail *</Label>
+              <Input
+                id="new_email"
+                type="email"
+                value={createData.email}
+                onChange={(e) => setCreateData({ ...createData, email: e.target.value })}
+                placeholder="email@empresa.com"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_password">Senha *</Label>
+              <Input
+                id="new_password"
+                type="password"
+                value={createData.password}
+                onChange={(e) => setCreateData({ ...createData, password: e.target.value })}
+                placeholder="Mínimo 8 caracteres"
+                minLength={8}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_company">Empresa *</Label>
+              <Select
+                value={createData.company_id}
+                onValueChange={(value) => setCreateData({ ...createData, company_id: value })}
+              >
+                <SelectTrigger id="new_company">
+                  <SelectValue placeholder="Selecione uma empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  {companies.map((company) => (
+                    <SelectItem key={company.id} value={company.id}>
+                      {company.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new_role">Papel</Label>
+              <Select
+                value={createData.role}
+                onValueChange={(value: 'admin' | 'user') => setCreateData({ ...createData, role: value })}
+              >
+                <SelectTrigger id="new_role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="user">Usuário</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? 'Criando...' : 'Criar usuário'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

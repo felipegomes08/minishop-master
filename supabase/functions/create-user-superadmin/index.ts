@@ -89,8 +89,11 @@ Deno.serve(async (req) => {
     });
     if (createErr || !created.user) {
       const msg = createErr?.message ?? "Erro ao criar usuário";
-      const already = /already|registered|exists/i.test(msg);
-      return json({ error: already ? "Já existe um usuário com este e-mail" : msg }, 400);
+      console.error("createUser error:", msg);
+      let friendly = msg;
+      if (/already|registered|exists/i.test(msg)) friendly = "Já existe um usuário com este e-mail";
+      else if (/weak|pwned|leaked|known/i.test(msg)) friendly = "Senha muito comum ou vazada na internet. Escolha uma senha mais forte (misture letras, números e símbolos).";
+      return json({ error: friendly }, 400);
     }
     const newUserId = created.user.id;
 

@@ -123,7 +123,13 @@ export default function MasterUsers() {
         },
       });
 
-      const errMsg = (data as any)?.error;
+      let errMsg = (data as any)?.error;
+      if (error && !errMsg) {
+        try {
+          const body = await (error as any).context?.json?.();
+          errMsg = body?.error;
+        } catch { /* ignore */ }
+      }
       if (error || errMsg) {
         toast.error(errMsg || 'Erro ao criar usuário');
         return;

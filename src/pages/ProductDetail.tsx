@@ -152,22 +152,22 @@ export default function ProductDetail() {
     
     // Include variant info if selected
     const variantInfo = selectedVariant?.options?.length 
-      ? `\n📦 Variante: ${selectedVariant.options.map(o => o.label).join(', ')}`
+      ? `\n\u{1F4E6} Variante: ${selectedVariant.options.map(o => o.label).join(', ')}`
       : '';
     
-    const message = `Olá! 👋
+    const message = `Olá! \u{1F44B}
 
 Tenho interesse neste produto:
 
 *${product.name}*${variantInfo}
-💰 Preço: ${formattedPrice}
+\u{1F4B0} Preço: ${formattedPrice}
 
-📎 Link: ${productUrl}
+\u{1F4CE} Link: ${productUrl}
 
 Poderia me dar mais informações?`;
 
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${encodedMessage}`;
     
     window.open(whatsappUrl, '_blank');
   };

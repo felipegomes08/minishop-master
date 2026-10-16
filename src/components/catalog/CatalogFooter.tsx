@@ -11,8 +11,8 @@ export function CatalogFooter({ storeName, whatsappNumber, primaryColor, seconda
   const handleWhatsAppClick = () => {
     if (!whatsappNumber) return;
     const cleanNumber = whatsappNumber.replace(/\D/g, '');
-    const message = encodeURIComponent(`Olá${storeName ? `, ${storeName}` : ''}! 👋 Gostaria de mais informações.`);
-    window.open(`https://wa.me/${cleanNumber}?text=${message}`, '_blank');
+    const message = encodeURIComponent(`Olá${storeName ? `, ${storeName}` : ''}! \u{1F44B} Gostaria de mais informações.`);
+    window.open(`https://api.whatsapp.com/send?phone=${cleanNumber}&text=${message}`, '_blank');
   };
 
   const primary = primaryColor || 'hsl(var(--primary))';

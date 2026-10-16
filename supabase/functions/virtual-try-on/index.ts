@@ -69,7 +69,7 @@ serve(async (req) => {
 
     console.log('Iniciando geração de imagem virtual try-on para:', productName);
 
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const callAI = () => fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${LOVABLE_API_KEY}`,
@@ -81,24 +81,24 @@ serve(async (req) => {
           {
             role: 'user',
             content: [
-              {
-                type: 'text',
-                text: prompt
-              },
-              {
-                type: 'image_url',
-                image_url: { url: userPhoto }
-              },
-              {
-                type: 'image_url',
-                image_url: { url: productImage }
-              }
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: userPhoto } },
+              { type: 'image_url', image_url: { url: productImage } }
             ]
           }
         ],
         modalities: ['image', 'text']
       }),
     });
+
+    let response = await callAI();
+    // Uma nova tentativa automática quando o serviço de IA está temporariamente indisponível
+    if (response.status >= 500) {
+      console.warn('Serviço de IA indisponível (', response.status, '), tentando novamente...');
+      await response.text();
+      await new Promise((r) => setTimeout(r, 2000 + Math.random() * 1000));
+      response = await callAI();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
